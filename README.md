@@ -34,7 +34,7 @@
 
 ### 로그인 및 편집 기능
 - 로그인 사용자만 카드 추가·수정·삭제 가능
-- 테스트 계정: `Master / 2026`
+- 로그인 계정은 서버 전용 환경변수로 설정
 - 로그인 시 카드 드래그 배치 및 편집 버튼 활성화
 
 ### 모바일 지원
@@ -52,7 +52,7 @@
 | 스타일링 | Tailwind CSS v4 |
 | 아이콘 | lucide-react |
 | 데이터 저장 | LocalStorage (브라우저) |
-| 인증 | 클라이언트 테스트 인증 (운영 시 DB 교체 필요) |
+| 인증 | 서버 Route Handler + HttpOnly 세션 쿠키 |
 
 ---
 
@@ -70,14 +70,20 @@ npm run dev
 
 ---
 
-## 환경변수 설정 (선택)
+## 환경변수 설정
 
 `.env.local` 파일을 생성하고 아래 항목을 설정합니다.
-설정하지 않으면 LocalStorage 모드로 동작합니다.
 
 ```
-# Google Apps Script 웹앱 URL (실시간 시트 동기화용, 선택사항)
-NEXT_PUBLIC_SHEET_API_URL=https://script.google.com/macros/s/...
+# 교사 로그인 계정
+SCHOOL_WORKCARE_TEACHER_NAME=...
+SCHOOL_WORKCARE_TEACHER_PASSWORD=...
+
+# 32자 이상 임의 문자열
+SCHOOL_WORKCARE_SESSION_SECRET=...
+
+# Google Apps Script 웹앱 URL (서버 전용)
+SCHOOL_WORKCARE_SHEET_API_URL=https://script.google.com/macros/s/...
 ```
 
 > `.env.local`은 `.gitignore`에 포함되어 있어 GitHub에 올라가지 않습니다.
@@ -98,7 +104,8 @@ src/
 │   ├── CardEditorDialog.tsx  # 카드 추가·수정 다이얼로그
 │   └── LoginDialog.tsx       # 로그인 다이얼로그
 └── lib/
-    ├── auth.ts               # 인증 로직 (운영 시 DB 교체)
+    ├── auth.ts               # 클라이언트 인증 API 호출
+    ├── server-auth.ts        # 서버 세션 및 환경변수 인증
     ├── card-data.ts          # 카드 데이터 로드/저장 (LocalStorage)
     └── grid.ts               # 그리드 좌표 계산 유틸
 ```
@@ -134,9 +141,9 @@ src/
 
 ## 보안 주의사항
 
-- 현재 로그인은 **클라이언트 테스트 인증**입니다. 소스코드를 열람하면 계정 정보가 노출됩니다.
-- 운영 배포 시 `src/lib/auth.ts`의 인증 로직을 **서버 Route Handler + DB 조회**로 반드시 교체하세요.
-- `NEXT_PUBLIC_SHEET_API_URL`은 퍼블릭 변수로 클라이언트에 노출됩니다. 민감한 키는 `NEXT_PUBLIC_` 접두어 없이 서버 전용으로 설정하세요.
+- 로그인 비밀번호와 Google Apps Script URL은 `NEXT_PUBLIC_` 없이 서버 전용 환경변수로만 설정합니다.
+- 카드 쓰기 동기화는 `/api/cards` Route Handler에서 세션을 검증한 뒤 실행됩니다.
+- `.env.local`은 `.gitignore`에 포함되어 있으므로 GitHub에 커밋하지 않습니다.
 
 ---
 

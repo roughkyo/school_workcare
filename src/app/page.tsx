@@ -13,10 +13,10 @@ import {
   loadCustomDepartments,
   saveCustomDepartments,
   INITIAL_CARDS,
-  appendCardToApi,
   loadCardsFromSheets,
   syncAllCardsToSheets,
 } from '@/lib/card-data';
+import { getTeacherSession, logoutTeacher } from '@/lib/auth';
 
 export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
@@ -44,15 +44,13 @@ export default function Home() {
   useEffect(() => {
     setIsMounted(true);
 
-    const apiExists = !!process.env.NEXT_PUBLIC_SHEET_API_URL;
-    setHasApi(apiExists);
     setCustomDepartments(loadCustomDepartments());
 
-    const savedUser = localStorage.getItem('school-teacher-user');
-    if (savedUser) {
+    getTeacherSession().then((teacher) => {
+      if (!teacher) return;
       setIsLoggedIn(true);
-      setUserName(savedUser);
-    }
+      setUserName(teacher.name);
+    });
 
     // LocalStorage로 먼저 빠르게 렌더링 (부서 카드의 parentId 보정 적용)
     const localCards = loadCards().map((c) => {
@@ -64,16 +62,16 @@ export default function Home() {
     setCards(localCards);
 
     // Sheets에서 최신 데이터 로드 (읽기 전용 — 로드 시 Sheets에 쓰지 않음)
-    if (apiExists) {
-      const cachedTimeStr = localStorage.getItem('school-cards-cache-time');
-      const cachedTime = cachedTimeStr ? parseInt(cachedTimeStr, 10) : 0;
-      const now = Date.now();
-      const CACHE_DURATION = 5 * 60 * 1000; // 5분 캐시
-      const isCacheExpired = now - cachedTime > CACHE_DURATION;
+    const cachedTimeStr = localStorage.getItem('school-cards-cache-time');
+    const cachedTime = cachedTimeStr ? parseInt(cachedTimeStr, 10) : 0;
+    const now = Date.now();
+    const CACHE_DURATION = 5 * 60 * 1000; // 5분 캐시
+    const isCacheExpired = now - cachedTime > CACHE_DURATION;
 
-      if (isCacheExpired) {
-        loadCardsFromSheets().then((sheetsCards) => {
-          if (!sheetsCards || sheetsCards.length === 0) return;
+    if (isCacheExpired) {
+      loadCardsFromSheets().then((sheetsCards) => {
+        if (!sheetsCards || sheetsCards.length === 0) return;
+        setHasApi(true);
 
           const sheetsHasDepts =
             sheetsCards.some((c) => c.type === 'center') &&
@@ -260,8 +258,7 @@ export default function Home() {
           localStorage.setItem('school-cards-cache-time', Date.now().toString());
           setTriggerCenter((n) => n + 1); // 로드 완료 후 광양고 중앙 정렬
           // ⚠️ 로드 시 Sheets 쓰기 금지 — 다중 사용자 환경에서 데이터 충돌 방지
-        });
-      }
+      });
     }
   }, []);
 
@@ -303,9 +300,14 @@ export default function Home() {
   // Sheets 전체 동기화 (생성/수정/삭제 후, 또는 위치저장 버튼 클릭 시만 호출)
   const syncCardsToSheets = (newCards: MindMapNode[]) => {
     if (sheetsDebounceRef.current) clearTimeout(sheetsDebounceRef.current);
-    sheetsDebounceRef.current = setTimeout(() => {
-      syncAllCardsToSheets(newCards);
-      localStorage.setItem('school-cards-cache-time', Date.now().toString());
+    sheetsDebounceRef.current = setTimeout(async () => {
+      setIsSyncing(true);
+      const synced = await syncAllCardsToSheets(newCards);
+      setIsSyncing(false);
+      if (synced) {
+        setHasApi(true);
+        localStorage.setItem('school-cards-cache-time', Date.now().toString());
+      }
     }, 500);
   };
 
@@ -323,14 +325,13 @@ export default function Home() {
   const handleLoginSuccess = (name: string) => {
     setIsLoggedIn(true);
     setUserName(name);
-    localStorage.setItem('school-teacher-user', name);
   };
 
   // 로그아웃
   const handleLogout = () => {
+    logoutTeacher();
     setIsLoggedIn(false);
     setUserName(null);
-    localStorage.removeItem('school-teacher-user');
   };
 
   // (초기화 버튼은 사고 예방을 위해 삭제되었습니다.)

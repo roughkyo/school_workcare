@@ -5,15 +5,35 @@ export type Teacher = {
 };
 
 export async function verifyTeacherLogin(name: string, password: string): Promise<Teacher | null> {
-  // ⚠️  테스트 전용 인증 — 운영 배포 전 반드시 DB 인증으로 교체할 것
-  // 클라이언트 번들에 포함되므로 소스를 열람하면 계정 정보가 노출됩니다.
-  // 운영 단계: 이 함수를 서버 Route Handler + DB 조회로 교체하세요.
-  if (name === 'Master' && password === '2026') {
-    return {
-      id: 'master',
-      name: 'Master',
-      role: 'admin',
-    };
-  }
-  return null;
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, password }),
+  });
+
+  if (!response.ok) return null;
+
+  const data = (await response.json()) as { teacher?: Teacher };
+  return data.teacher ?? null;
+}
+
+export async function getTeacherSession(): Promise<Teacher | null> {
+  const response = await fetch('/api/auth/session', {
+    method: 'GET',
+    credentials: 'include',
+    cache: 'no-store',
+  });
+
+  if (!response.ok) return null;
+
+  const data = (await response.json()) as { teacher?: Teacher | null };
+  return data.teacher ?? null;
+}
+
+export async function logoutTeacher(): Promise<void> {
+  await fetch('/api/auth/logout', {
+    method: 'POST',
+    credentials: 'include',
+  });
 }

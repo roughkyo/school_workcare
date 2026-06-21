@@ -172,18 +172,16 @@ export function saveCustomDepartments(customDeps: string[]): void {
 
 // ================= Google Sheets API 연동 함수 =================
 
-function getApiUrl(): string | null {
-  const url = process.env.NEXT_PUBLIC_SHEET_API_URL;
-  if (!url) return null;
-  return url.trim().replace(/^['"]|['"]$/g, '');
-}
 
 /** Sheets에서 전체 카드 로드 (GET). 실패 시 null 반환 → LocalStorage 폴백 */
 export async function loadCardsFromSheets(): Promise<MindMapNode[] | null> {
-  const apiUrl = getApiUrl();
-  if (!apiUrl) return null;
   try {
-    const res = await fetch(apiUrl, { method: 'GET' });
+    const res = await fetch('/api/cards', {
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
     const data = await res.json();
     if (data.success && Array.isArray(data.cards) && data.cards.length > 0) {
       return data.cards as MindMapNode[];
@@ -194,37 +192,18 @@ export async function loadCardsFromSheets(): Promise<MindMapNode[] | null> {
   return null;
 }
 
-/** Sheets에 전체 카드 덮어쓰기 동기화 (POST syncAll, no-cors) */
-export async function syncAllCardsToSheets(cards: MindMapNode[]): Promise<void> {
-  const apiUrl = getApiUrl();
-  if (!apiUrl) return;
+/** Sheets에 전체 카드 덮어쓰기 동기화 (서버 API 경유) */
+export async function syncAllCardsToSheets(cards: MindMapNode[]): Promise<boolean> {
   try {
-    await fetch(apiUrl, {
+    const res = await fetch('/api/cards', {
       method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'syncAll', cards }),
     });
+    return res.ok;
   } catch (err) {
     console.error('Sheets sync error:', err);
-  }
-}
-
-/** 하위 호환용 단건 append */
-export async function appendCardToApi(card: MindMapNode): Promise<boolean> {
-  const apiUrl = getApiUrl();
-  if (!apiUrl) return false;
-  try {
-    await fetch(apiUrl, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'append', card }),
-    });
-    return true;
-  } catch (err) {
-    console.error('Sheets append error:', err);
     return false;
   }
 }
-

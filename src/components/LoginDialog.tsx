@@ -85,7 +85,7 @@ export default function LoginDialog({ isOpen, onClose, onLoginSuccess }: LoginDi
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="예: Master"
+                placeholder="교사명"
                 className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-4 text-sm outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 dark:border-slate-800 dark:bg-slate-950 dark:focus:border-indigo-500 dark:focus:ring-indigo-950/30"
               />
             </div>
