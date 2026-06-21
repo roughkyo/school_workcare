@@ -14,6 +14,8 @@ import {
   saveCustomDepartments,
   INITIAL_CARDS,
   appendCardToApi,
+  loadCardsFromSheets,
+  syncAllCardsToSheets,
 } from '@/lib/card-data';
 
 export default function Home() {
@@ -35,22 +37,31 @@ export default function Home() {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingCard, setEditingCard] = useState<MindMapNode | null>(null);
 
-  // 컴포넌트 마운트 및 구글 시트/로컬스토리지 데이터 로드 (단방향: 로컬 데이터 기본 사용)
+  // 마운트 시 데이터 로드: Sheets 우선 → 실패 시 LocalStorage 폴백
   useEffect(() => {
     setIsMounted(true);
 
-    const apiUrl = process.env.NEXT_PUBLIC_SHEET_API_URL;
-    const apiExists = !!apiUrl;
+    const apiExists = !!process.env.NEXT_PUBLIC_SHEET_API_URL;
     setHasApi(apiExists);
-
-    // 로컬스토리지에서 데이터를 읽어와 빠르게 렌더링
-    setCards(loadCards());
     setCustomDepartments(loadCustomDepartments());
 
     const savedUser = localStorage.getItem('school-teacher-user');
     if (savedUser) {
       setIsLoggedIn(true);
       setUserName(savedUser);
+    }
+
+    // LocalStorage로 먼저 빠르게 렌더링
+    setCards(loadCards());
+
+    // Sheets에서 최신 데이터 로드 (있으면 덮어씀)
+    if (apiExists) {
+      loadCardsFromSheets().then((sheetsCards) => {
+        if (sheetsCards && sheetsCards.length > 0) {
+          setCards(sheetsCards);
+          saveCards(sheetsCards); // LocalStorage도 최신화
+        }
+      });
     }
   }, []);
 
@@ -74,11 +85,13 @@ export default function Home() {
     });
   };
 
-  // 카드 데이터를 로컬 상태 및 로컬스토리지에 안정적으로 동기 보존 (드래그/수정/삭제 시 API 과부하 차단)
+  // 카드 데이터를 로컬 상태, LocalStorage, Sheets에 동기화
   const handleSyncCards = (newCards: MindMapNode[]) => {
-    pushToHistory(cards); // 상태 변환 전 현재 cards 복사본 백업
+    pushToHistory(cards);
     setCards(newCards);
     saveCards(newCards);
+    // Sheets 동기화 (드래그 위치 포함 전체 반영)
+    syncAllCardsToSheets(newCards);
   };
 
   // 되돌리기(Undo) 액션 핸들러

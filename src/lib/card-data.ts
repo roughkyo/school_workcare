@@ -247,44 +247,60 @@ export function saveCustomDepartments(customDeps: string[]): void {
   }
 }
 
-// ================= Google Sheets API 연동 함수 추가 =================
+// ================= Google Sheets API 연동 함수 =================
 
-/**
- * Google Apps Script Web App API로 신규 생성된 카드 1개만 단방향으로 누적(Append) 기입합니다.
- * 브라우저 CORS 차단을 우회하기 위해 mode: 'no-cors'를 적용합니다.
- */
-export async function appendCardToApi(card: MindMapNode): Promise<boolean> {
-  let apiUrl = process.env.NEXT_PUBLIC_SHEET_API_URL;
-  if (!apiUrl) return false;
+function getApiUrl(): string | null {
+  const url = process.env.NEXT_PUBLIC_SHEET_API_URL;
+  if (!url) return null;
+  return url.trim().replace(/^['"]|['"]$/g, '');
+}
 
-  apiUrl = apiUrl.trim().replace(/^['"]|['"]$/g, '');
-  
-  // hhttps:// 또는 hhttp:// 형태의 프로토콜 오타 자동 보정
-  if (apiUrl.startsWith('hhttps://')) {
-    apiUrl = apiUrl.replace('hhttps://', 'https://');
-  } else if (apiUrl.startsWith('hhttp://')) {
-    apiUrl = apiUrl.replace('hhttp://', 'http://');
-  }
-
-  if (!apiUrl) return false;
-
+/** Sheets에서 전체 카드 로드 (GET). 실패 시 null 반환 → LocalStorage 폴백 */
+export async function loadCardsFromSheets(): Promise<MindMapNode[] | null> {
+  const apiUrl = getApiUrl();
+  if (!apiUrl) return null;
   try {
-    // mode: 'no-cors'를 부여하여 브라우저 CORS 체크를 거치지 않고 강제 단방향 전송합니다.
+    const res = await fetch(apiUrl, { method: 'GET' });
+    const data = await res.json();
+    if (data.success && Array.isArray(data.cards) && data.cards.length > 0) {
+      return data.cards as MindMapNode[];
+    }
+  } catch (err) {
+    console.error('Sheets load error:', err);
+  }
+  return null;
+}
+
+/** Sheets에 전체 카드 덮어쓰기 동기화 (POST syncAll, no-cors) */
+export async function syncAllCardsToSheets(cards: MindMapNode[]): Promise<void> {
+  const apiUrl = getApiUrl();
+  if (!apiUrl) return;
+  try {
     await fetch(apiUrl, {
       method: 'POST',
       mode: 'no-cors',
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8',
-      },
-      body: JSON.stringify({
-        action: 'append',
-        card: card,
-      }),
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'syncAll', cards }),
     });
-    // no-cors 응답은 opaque 타입이므로 success 필드를 읽을 수 없습니다. 전송 완료 시 무조건 성공으로 간주합니다.
+  } catch (err) {
+    console.error('Sheets sync error:', err);
+  }
+}
+
+/** 하위 호환용 단건 append */
+export async function appendCardToApi(card: MindMapNode): Promise<boolean> {
+  const apiUrl = getApiUrl();
+  if (!apiUrl) return false;
+  try {
+    await fetch(apiUrl, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'append', card }),
+    });
     return true;
-  } catch (error) {
-    console.error('Error appending card to API (no-cors mode):', error);
+  } catch (err) {
+    console.error('Sheets append error:', err);
     return false;
   }
 }
