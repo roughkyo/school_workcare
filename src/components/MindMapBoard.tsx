@@ -482,7 +482,14 @@ export default function MindMapBoard({
               {/* 2단계 링크 카드 -> 1단계 부서 연결선 */}
               {visibleCards.map((node) => {
                 if (node.type !== 'link' || !node.parentId) return null;
-                const parentNode = visibleCards.find((c) => c.id === node.parentId);
+                const normalizeStr = (str: string) => str.replace(/\s+/g, '');
+                const targetParentIdNormalized = normalizeStr(node.parentId);
+
+                const parentNode = visibleCards.find(
+                  (c) =>
+                    c.id === node.parentId ||
+                    normalizeStr(c.label) === targetParentIdNormalized
+                );
                 if (!parentNode) return null;
 
                 const centerA = getCardCenter(parentNode);

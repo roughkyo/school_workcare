@@ -169,18 +169,20 @@ export default function Home() {
 
           const sheetsLinks = sheetsCards.filter((c) => c.type === 'link');
 
-          // parentId가 부서명(label)으로 저장된 경우 실제 ID로 자동 변환
+          // parentId가 부서명(label)으로 저장된 경우 실제 ID로 자동 변환 (공백 제거 후 비교로 오타 방지)
+          const normalizeStr = (str: string) => str.replace(/\s+/g, '');
           const labelToId = new Map(
             deptStructure
               .filter((c) => c.type === 'department')
-              .map((c) => [c.label, c.id])
+              .map((c) => [normalizeStr(c.label), c.id])
           );
           const idSet = new Set(deptStructure.map((c) => c.id));
 
           // parentId 부서명 → ID 변환
           const resolvedLinks = sheetsLinks.map((card) => {
             if (card.parentId && !idSet.has(card.parentId)) {
-              const resolvedId = labelToId.get(card.parentId);
+              const normalizedParentId = normalizeStr(card.parentId);
+              const resolvedId = labelToId.get(normalizedParentId);
               if (resolvedId) return { ...card, parentId: resolvedId };
             }
             return card;
