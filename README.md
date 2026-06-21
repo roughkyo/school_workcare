@@ -1,36 +1,138 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 광양고 업무 Link Hub
 
-## Getting Started
+광양고등학교 부서별 업무 링크를 한 화면에서 마인드맵 형태로 관리하는 정적 웹사이트입니다.
 
-First, run the development server:
+---
+
+## 프로젝트 개요
+
+학교 내 여러 부서의 주요 업무 링크를 카드 형태로 시각화하고, 방사형 마인드맵 캔버스 위에서 자유롭게 배치·탐색할 수 있는 내부 업무 포털입니다.
+
+---
+
+## 주요 기능
+
+### 마인드맵 캔버스
+- 마우스 드래그로 화면 이동, 휠 스크롤로 확대·축소
+- 부서 노드와 업무카드 노드를 SVG 베지어 곡선으로 연결
+- 카드 드래그 앤 드롭 + 보이지 않는 그리드 스냅 정렬
+- 부서 노드를 드래그하면 소속 업무카드가 함께 이동
+
+### 왼쪽 메뉴바 (드래그로 너비 조절 가능)
+| 메뉴 | 설명 |
+|---|---|
+| 필터 | 전체 부서 보기 / 업무카드 있는 부서만 보기 |
+| 위치 저장 | 현재 카드 배치를 브라우저(LocalStorage)에 저장 |
+| 사용법 | 주요 조작 방법 안내 |
+| 링크 모아보기 | 부서 클릭 시 업무카드 목록을 테이블 모달로 표시 |
+
+### 업무카드 인터랙션
+- **부서 클릭** → 소속 업무카드 연주황색 하이라이트
+- **부서 더블클릭** → 업무카드 추가 다이얼로그 오픈
+- **업무카드 hover** → 상세 설명 + 바로가기 툴팁 표시
+- **업무카드 더블클릭** → 바로가기 URL 새 탭으로 바로 열기
+
+### 로그인 및 편집 기능
+- 로그인 사용자만 카드 추가·수정·삭제 가능
+- 테스트 계정: `Master / 2026`
+- 로그인 시 카드 드래그 배치 및 편집 버튼 활성화
+
+### 모바일 지원
+- 768px 미만 화면에서 자동으로 아코디언 트리 뷰로 전환
+- 터치 환경 최적화
+
+---
+
+## 기술 스택
+
+| 구분 | 기술 |
+|---|---|
+| 프레임워크 | Next.js 16 (App Router) |
+| 언어 | TypeScript |
+| 스타일링 | Tailwind CSS v4 |
+| 아이콘 | lucide-react |
+| 데이터 저장 | LocalStorage (브라우저) |
+| 인증 | 클라이언트 테스트 인증 (운영 시 DB 교체 필요) |
+
+---
+
+## 설치 및 실행
 
 ```bash
+# 의존성 설치
+npm install
+
+# 개발 서버 실행
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+브라우저에서 [http://localhost:3000](http://localhost:3000) 접속
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 환경변수 설정 (선택)
 
-## Learn More
+`.env.local` 파일을 생성하고 아래 항목을 설정합니다.
+설정하지 않으면 LocalStorage 모드로 동작합니다.
 
-To learn more about Next.js, take a look at the following resources:
+```
+# Google Apps Script 웹앱 URL (실시간 시트 동기화용, 선택사항)
+NEXT_PUBLIC_SHEET_API_URL=https://script.google.com/macros/s/...
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+> `.env.local`은 `.gitignore`에 포함되어 있어 GitHub에 올라가지 않습니다.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 파일 구조
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+src/
+├── app/
+│   ├── page.tsx              # 메인 페이지 (전체 상태 관리)
+│   └── layout.tsx
+├── components/
+│   ├── AppHeader.tsx         # 상단 헤더 (로그인/로그아웃)
+│   ├── MindMapBoard.tsx      # 마인드맵 캔버스 + 왼쪽 메뉴바
+│   ├── DepartmentCard.tsx    # 부서/업무카드 노드 컴포넌트
+│   ├── CardEditorDialog.tsx  # 카드 추가·수정 다이얼로그
+│   └── LoginDialog.tsx       # 로그인 다이얼로그
+└── lib/
+    ├── auth.ts               # 인증 로직 (운영 시 DB 교체)
+    ├── card-data.ts          # 카드 데이터 로드/저장 (LocalStorage)
+    └── grid.ts               # 그리드 좌표 계산 유틸
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 작업 이력 요약
+
+2026년 6월 Claude Code를 활용하여 설계부터 구현까지 진행하였습니다.
+
+| 단계 | 작업 내용 |
+|---|---|
+| 1단계 | Next.js 프로젝트 생성, 기본 카드 데이터 구조 및 카드형 UI 구현 |
+| 2단계 | 방사형 마인드맵 보드 구현 — Pan/Zoom, SVG 베지어 연결선, 그리드 스냅 |
+| 3단계 | 드래그 개선 — 부서 이동 시 소속 업무카드 동반 이동, 배치 업데이트로 위치 저장 버그 수정 |
+| 4단계 | 왼쪽 메뉴바 추가 — 필터(전체/업무카드 있는 부서만), 위치 저장, 사용법 안내 |
+| 5단계 | 부서 클릭 시 소속 업무카드 연주황색 하이라이트 효과 추가 |
+| 6단계 | 링크 모아보기 모달 구현 — 부서별 업무카드를 테이블 형태로 표시, 백드롭 블러 |
+| 7단계 | 업무카드 생성 위치 최적화 — 중앙→부서 방향 단위벡터 기반 스폰, 형제 카드 수직 분산 배치 |
+| 8단계 | 툴팁 UX 개선 — hover 이동 중 사라짐 방지(pb 브리지), 업무카드 더블클릭 바로가기 |
+| 9단계 | 왼쪽 메뉴바 리사이즈 핸들 — 44px~212px 드래그 조절, 축소 시 아이콘 전용 모드 |
+| 10단계 | XSS 보안 강화 — `sanitizeUrl()` 함수 추가, `javascript:` 프로토콜 차단 (3곳 적용) |
+| 11단계 | GitHub 배포 — 보안 3종 체크(gitignore, API키 유출, XSS) 완료 후 커밋·푸시 |
+
+---
+
+## 보안 주의사항
+
+- 현재 로그인은 **클라이언트 테스트 인증**입니다. 소스코드를 열람하면 계정 정보가 노출됩니다.
+- 운영 배포 시 `src/lib/auth.ts`의 인증 로직을 **서버 Route Handler + DB 조회**로 반드시 교체하세요.
+- `NEXT_PUBLIC_SHEET_API_URL`은 퍼블릭 변수로 클라이언트에 노출됩니다. 민감한 키는 `NEXT_PUBLIC_` 접두어 없이 서버 전용으로 설정하세요.
+
+---
+
+## 라이선스
+
+내부 사용 목적으로 제작된 프로젝트입니다.
