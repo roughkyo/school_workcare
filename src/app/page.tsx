@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plus } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import MindMapBoard from '@/components/MindMapBoard';
@@ -31,6 +31,8 @@ export default function Home() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [hasApi, setHasApi] = useState(false);
   const [historyStack, setHistoryStack] = useState<MindMapNode[][]>([]);
+  // Sheets 동기화 디바운스 타이머 (드래그 중 과도한 요청 방지)
+  const sheetsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 다이얼로그 상태
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -109,13 +111,16 @@ export default function Home() {
     });
   };
 
-  // 카드 데이터를 로컬 상태, LocalStorage, Sheets에 동기화
+  // 카드 데이터를 로컬 상태, LocalStorage에 즉시 저장하고
+  // Sheets 동기화는 2초 디바운스 처리 (드래그 중 과부하 방지)
   const handleSyncCards = (newCards: MindMapNode[]) => {
     pushToHistory(cards);
     setCards(newCards);
     saveCards(newCards);
-    // Sheets 동기화 (드래그 위치 포함 전체 반영)
-    syncAllCardsToSheets(newCards);
+    if (sheetsDebounceRef.current) clearTimeout(sheetsDebounceRef.current);
+    sheetsDebounceRef.current = setTimeout(() => {
+      syncAllCardsToSheets(newCards);
+    }, 2000);
   };
 
   // 되돌리기(Undo) 액션 핸들러
