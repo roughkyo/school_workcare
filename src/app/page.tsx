@@ -57,27 +57,22 @@ export default function Home() {
     const localCards = loadCards();
     setCards(localCards);
 
-    // Sheets에서 최신 데이터 로드 후 병합
+    // Sheets에서 최신 데이터 로드 (읽기 전용 — 로드 시 Sheets에 쓰지 않음)
     if (apiExists) {
       loadCardsFromSheets().then((sheetsCards) => {
-        if (!sheetsCards || sheetsCards.length === 0) {
-          syncAllCardsToSheets(localCards);
-          return;
-        }
+        if (!sheetsCards || sheetsCards.length === 0) return;
 
         const sheetsHasDepts =
           sheetsCards.some((c) => c.type === 'center') &&
           sheetsCards.some((c) => c.type === 'department');
 
-        // 부서 구조 결정: Sheets에 dept가 있으면 Sheets 사용, 없으면 로컬 사용
         const deptStructure = sheetsHasDepts
           ? sheetsCards.filter((c) => c.type === 'center' || c.type === 'department')
           : localCards.filter((c) => c.type === 'center' || c.type === 'department');
 
         const sheetsLinks = sheetsCards.filter((c) => c.type === 'link');
 
-        // parentId가 부서명(label)으로 저장된 경우 실제 ID로 변환
-        // (구버전 appendCardToApi가 ID 대신 label을 저장했던 문제 수정)
+        // parentId가 부서명(label)으로 저장된 경우 실제 ID로 자동 변환
         const labelToId = new Map(
           deptStructure
             .filter((c) => c.type === 'department')
@@ -96,8 +91,8 @@ export default function Home() {
         const merged = [...deptStructure, ...resolvedLinks];
         setCards(merged);
         saveCards(merged);
-        // Sheets에 올바른 ID 기반 데이터로 덮어쓰기 (이후 중복·오류 방지)
-        syncAllCardsToSheets(merged);
+        // ⚠️ 여기서 syncAllCardsToSheets 호출 금지
+        // 로드할 때마다 Sheets를 덮어쓰면 다중 사용자 환경에서 데이터 충돌 발생
       });
     }
   }, []);
