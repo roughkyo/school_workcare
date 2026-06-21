@@ -52,14 +52,24 @@ export default function Home() {
     }
 
     // LocalStorage로 먼저 빠르게 렌더링
-    setCards(loadCards());
+    const localCards = loadCards();
+    setCards(localCards);
 
-    // Sheets에서 최신 데이터 로드 (있으면 덮어씀)
+    // Sheets에서 최신 데이터 로드
     if (apiExists) {
       loadCardsFromSheets().then((sheetsCards) => {
-        if (sheetsCards && sheetsCards.length > 0) {
+        // Sheets에 center/department 노드가 없으면 구조가 깨진 것 → LocalStorage 사용 후 Sheets에 전체 동기화
+        const hasDeptStructure = sheetsCards &&
+          sheetsCards.some((c) => c.type === 'center') &&
+          sheetsCards.some((c) => c.type === 'department');
+
+        if (hasDeptStructure && sheetsCards) {
+          // Sheets 데이터가 완전한 경우 → 그대로 사용
           setCards(sheetsCards);
-          saveCards(sheetsCards); // LocalStorage도 최신화
+          saveCards(sheetsCards);
+        } else {
+          // Sheets 데이터가 불완전한 경우 → LocalStorage 데이터로 Sheets 복구
+          syncAllCardsToSheets(localCards);
         }
       });
     }
