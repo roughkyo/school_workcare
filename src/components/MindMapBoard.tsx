@@ -15,7 +15,8 @@ interface MindMapBoardProps {
   onUpdateCardPosition: (id: string, position: { x: number; y: number }) => void;
   onBatchUpdatePositions: (updates: { id: string; position: { x: number; y: number } }[]) => void;
   onDoubleClickCard?: (card: MindMapNode) => void;
-  onSavePositions?: (cards: MindMapNode[]) => void; // 위치저장 버튼 → Sheets 동기화
+  onSavePositions?: (cards: MindMapNode[]) => void;
+  triggerCenter?: number; // 값이 바뀔 때마다 광양고 중앙 정렬 실행
 }
 
 export default function MindMapBoard({
@@ -27,6 +28,7 @@ export default function MindMapBoard({
   onBatchUpdatePositions,
   onDoubleClickCard,
   onSavePositions,
+  triggerCenter,
 }: MindMapBoardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const transformRef = useRef<HTMLDivElement>(null);
@@ -116,6 +118,13 @@ export default function MindMapBoard({
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Sheets 로드 완료 등 외부에서 중앙 정렬 요청 시
+  useEffect(() => {
+    if (!triggerCenter) return;
+    setTimeout(() => centerGwangyangOnScreen(zoom), 50);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [triggerCenter]);
 
   // 3. 마우스 휠 줌(Zoom) 브라우저 기본 스크롤 차단 리스너 (Passive = false 강제)
   useEffect(() => {

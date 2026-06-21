@@ -31,6 +31,7 @@ export default function Home() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [hasApi, setHasApi] = useState(false);
   const [historyStack, setHistoryStack] = useState<MindMapNode[][]>([]);
+  const [triggerCenter, setTriggerCenter] = useState(0);
   // Sheets 동기화 디바운스 타이머 (드래그 중 과도한 요청 방지)
   const sheetsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -130,6 +131,7 @@ export default function Home() {
         const merged = [...deptStructure, ...repositionedLinks];
         setCards(merged);
         saveCards(merged);
+        setTriggerCenter((n) => n + 1); // 로드 완료 후 광양고 중앙 정렬
         // ⚠️ 로드 시 Sheets 쓰기 금지 — 다중 사용자 환경에서 데이터 충돌 방지
       });
     }
@@ -398,6 +400,7 @@ export default function Home() {
           onUpdateCardPosition={handleUpdateCardPosition}
           onBatchUpdatePositions={handleBatchUpdatePositions}
           onSavePositions={syncCardsToSheets}
+          triggerCenter={triggerCenter}
           onDoubleClickCard={handleDeptDoubleClick}
         />
       </main>
