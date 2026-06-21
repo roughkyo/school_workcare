@@ -80,6 +80,7 @@ export default function Home() {
         );
         const idSet = new Set(deptStructure.map((c) => c.id));
 
+        // parentId 부서명 → ID 변환
         const resolvedLinks = sheetsLinks.map((card) => {
           if (card.parentId && !idSet.has(card.parentId)) {
             const resolvedId = labelToId.get(card.parentId);
@@ -88,11 +89,47 @@ export default function Home() {
           return card;
         });
 
-        const merged = [...deptStructure, ...resolvedLinks];
+        // 부서별 링크카드 인덱스를 추적하여 위치 재계산
+        const centerNode = deptStructure.find((c) => c.type === 'center');
+        const centerX = centerNode?.position.x ?? 152;
+        const centerY = centerNode?.position.y ?? 116;
+        const siblingCountMap = new Map<string, number>();
+
+        const repositionedLinks = resolvedLinks.map((card) => {
+          const parentDept = deptStructure.find((c) => c.id === card.parentId);
+          if (!parentDept) return card;
+
+          const sibIdx = siblingCountMap.get(card.parentId) ?? 0;
+          siblingCountMap.set(card.parentId, sibIdx + 1);
+
+          // 중앙→부서 방향 단위벡터
+          const dx = parentDept.position.x - centerX;
+          const dy = parentDept.position.y - centerY;
+          const len = Math.sqrt(dx * dx + dy * dy) || 1;
+          const ux = dx / len;
+          const uy = dy / len;
+          const px = -uy;
+          const py = ux;
+
+          // 형제 순서에 따른 수직 분산 (0, +1, -1, +2, -2...)
+          const perpIdx =
+            sibIdx === 0 ? 0
+            : sibIdx % 2 === 1 ? Math.ceil(sibIdx / 2)
+            : -(sibIdx / 2);
+
+          return {
+            ...card,
+            position: {
+              x: Math.max(0, Math.round(parentDept.position.x + ux * 20 + px * perpIdx * 15)),
+              y: Math.max(0, Math.round(parentDept.position.y + uy * 20 + py * perpIdx * 15)),
+            },
+          };
+        });
+
+        const merged = [...deptStructure, ...repositionedLinks];
         setCards(merged);
         saveCards(merged);
-        // ⚠️ 여기서 syncAllCardsToSheets 호출 금지
-        // 로드할 때마다 Sheets를 덮어쓰면 다중 사용자 환경에서 데이터 충돌 발생
+        // ⚠️ 로드 시 Sheets 쓰기 금지 — 다중 사용자 환경에서 데이터 충돌 방지
       });
     }
   }, []);
