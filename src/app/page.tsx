@@ -67,9 +67,87 @@ export default function Home() {
           sheetsCards.some((c) => c.type === 'center') &&
           sheetsCards.some((c) => c.type === 'department');
 
-        const deptStructure = sheetsHasDepts
+        const rawDeptStructure = sheetsHasDepts
           ? sheetsCards.filter((c) => c.type === 'center' || c.type === 'department')
           : localCards.filter((c) => c.type === 'center' || c.type === 'department');
+
+        // INITIAL_CARDS 기준 기본 좌표 맵 생성
+        const defaultPosMap = new Map<string, { x: number; y: number }>(
+          INITIAL_CARDS.map((c) => [c.id, c.position])
+        );
+
+        // 부서 노드 좌표(position) 유효성 검증 및 복구
+        const rawCenter = rawDeptStructure.find((c) => c.type === 'center');
+        const rawCenterX = rawCenter?.position?.x;
+        const rawCenterY = rawCenter?.position?.y;
+        const isOldScale = typeof rawCenterX === 'number' && rawCenterX < 50;
+        const is2ndGenScale = typeof rawCenterX === 'number' && rawCenterX === 96 && rawCenterY === 72;
+
+        let customDeptCount = 0; // 신규 커스텀 부서 분산 배치를 위한 카운터
+
+        const deptStructure = rawDeptStructure.map((card) => {
+          let pos = card.position;
+          
+          // 1. position 필드가 유효한지 검증 (x, y가 숫자이고 0,0 이 아닌지)
+          const isValid =
+            pos &&
+            typeof pos.x === 'number' &&
+            typeof pos.y === 'number' &&
+            !isNaN(pos.x) &&
+            !isNaN(pos.y) &&
+            !(pos.x === 0 && pos.y === 0);
+
+          if (isValid) {
+            // 구버전 스케일(40px) 마이그레이션
+            if (isOldScale) {
+              pos = {
+                x: pos.x * 4 + 56,
+                y: pos.y * 4 + 44,
+              };
+            }
+            // 2세대 중앙 시프트 마이그레이션
+            else if (is2ndGenScale) {
+              pos = {
+                x: pos.x + 56,
+                y: pos.y + 44,
+              };
+            }
+            return { ...card, position: pos };
+          }
+
+          // 2. 비정상 좌표인 경우 INITIAL_CARDS 기본 배치 복구 시도
+          const fallbackPos = defaultPosMap.get(card.id);
+          if (fallbackPos) {
+            return { ...card, position: { ...fallbackPos } };
+          }
+
+          // 3. INITIAL_CARDS에도 없는 커스텀 부서인 경우 동적 분산 스폰
+          if (card.type === 'center') {
+            return { ...card, position: { x: 152, y: 116 } };
+          }
+
+          // 부서인 경우 중앙 노드 기준 적절한 빈 자리에 스폰 (사방 배치 오프셋 적용)
+          const refCenterX = 152;
+          const refCenterY = 116;
+          const offsets = [
+            { x: -8, y: -8 }, // 좌상
+            { x: 8, y: -8 },  // 우상
+            { x: -8, y: 8 },  // 좌하
+            { x: 8, y: 8 },   // 우하
+            { x: 0, y: 12 },  // 하단
+            { x: 0, y: -12 }, // 상단
+          ];
+          const offset = offsets[customDeptCount % offsets.length] || { x: 0, y: 8 };
+          customDeptCount++;
+
+          return {
+            ...card,
+            position: {
+              x: refCenterX + offset.x,
+              y: refCenterY + offset.y,
+            },
+          };
+        });
 
         const sheetsLinks = sheetsCards.filter((c) => c.type === 'link');
 
