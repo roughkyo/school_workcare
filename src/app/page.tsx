@@ -99,8 +99,9 @@ export default function Home() {
           const parentDept = deptStructure.find((c) => c.id === card.parentId);
           if (!parentDept) return card;
 
-          const sibIdx = siblingCountMap.get(card.parentId) ?? 0;
-          siblingCountMap.set(card.parentId, sibIdx + 1);
+          const parentId = card.parentId ?? '';
+          const sibIdx = siblingCountMap.get(parentId) ?? 0;
+          siblingCountMap.set(parentId, sibIdx + 1);
 
           // 중앙→부서 방향 단위벡터
           const dx = parentDept.position.x - centerX;
