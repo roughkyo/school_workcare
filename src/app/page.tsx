@@ -54,8 +54,13 @@ export default function Home() {
       setUserName(savedUser);
     }
 
-    // LocalStorage로 먼저 빠르게 렌더링
-    const localCards = loadCards();
+    // LocalStorage로 먼저 빠르게 렌더링 (부서 카드의 parentId 보정 적용)
+    const localCards = loadCards().map((c) => {
+      if (c.type === 'department') {
+        return { ...c, parentId: 'center-gwangyang' };
+      }
+      return c;
+    });
     setCards(localCards);
 
     // Sheets에서 최신 데이터 로드 (읽기 전용 — 로드 시 Sheets에 쓰지 않음)
@@ -195,6 +200,34 @@ export default function Home() {
             const sibIdx = siblingCountMap.get(parentId) ?? 0;
             siblingCountMap.set(parentId, sibIdx + 1);
 
+            // 만약 이미 유효한 position 좌표가 원본에 있다면, 재계산하지 않고 보존한다
+            const pos = card.position;
+            const isValid =
+              pos &&
+              typeof pos.x === 'number' &&
+              typeof pos.y === 'number' &&
+              !isNaN(pos.x) &&
+              !isNaN(pos.y) &&
+              !(pos.x === 0 && pos.y === 0);
+
+            if (isValid) {
+              let finalX = pos.x;
+              let finalY = pos.y;
+              // 필요에 따라 구버전/2세대 스케일 마이그레이션 동일하게 적용
+              if (isOldScale) {
+                finalX = pos.x * 4 + 56;
+                finalY = pos.y * 4 + 44;
+              } else if (is2ndGenScale) {
+                finalX = pos.x + 56;
+                finalY = pos.y + 44;
+              }
+              return {
+                ...card,
+                position: { x: finalX, y: finalY },
+              };
+            }
+
+            // 좌표가 깨졌거나 없는 경우에만 부모 부서 기준 방사형 스폰
             // 중앙→부서 방향 단위벡터
             const dx = parentDept.position.x - centerX;
             const dy = parentDept.position.y - centerY;
@@ -253,9 +286,16 @@ export default function Home() {
   // 카드 데이터를 로컬 상태와 LocalStorage에만 저장 (Sheets 동기화 없음)
   // Sheets 동기화는 카드 생성/수정/삭제 시 syncCardsToSheets()로 명시적으로 호출
   const handleSyncCards = (newCards: MindMapNode[]) => {
+    // 1단계 부서 카드들의 parentId를 center-gwangyang으로 상시 보정
+    const sanitized = newCards.map((c) => {
+      if (c.type === 'department') {
+        return { ...c, parentId: 'center-gwangyang' };
+      }
+      return c;
+    });
     pushToHistory(cards);
-    setCards(newCards);
-    saveCards(newCards);
+    setCards(sanitized);
+    saveCards(sanitized);
   };
 
   // Sheets 전체 동기화 (생성/수정/삭제 후, 또는 위치저장 버튼 클릭 시만 호출)
