@@ -111,16 +111,20 @@ export default function Home() {
     });
   };
 
-  // 카드 데이터를 로컬 상태, LocalStorage에 즉시 저장하고
-  // Sheets 동기화는 2초 디바운스 처리 (드래그 중 과부하 방지)
+  // 카드 데이터를 로컬 상태와 LocalStorage에만 저장 (Sheets 동기화 없음)
+  // Sheets 동기화는 카드 생성/수정/삭제 시 syncCardsToSheets()로 명시적으로 호출
   const handleSyncCards = (newCards: MindMapNode[]) => {
     pushToHistory(cards);
     setCards(newCards);
     saveCards(newCards);
+  };
+
+  // Sheets 전체 동기화 (생성/수정/삭제 후, 또는 위치저장 버튼 클릭 시만 호출)
+  const syncCardsToSheets = (newCards: MindMapNode[]) => {
     if (sheetsDebounceRef.current) clearTimeout(sheetsDebounceRef.current);
     sheetsDebounceRef.current = setTimeout(() => {
       syncAllCardsToSheets(newCards);
-    }, 2000);
+    }, 500);
   };
 
   // 되돌리기(Undo) 액션 핸들러
@@ -188,10 +192,11 @@ export default function Home() {
       }
 
       handleSyncCards(filtered);
+      syncCardsToSheets(filtered); // 삭제 후 Sheets 동기화
     }
   };
 
-  // 노드 위치 업데이트 (단일)
+  // 노드 위치 업데이트 (단일) — 드래그이므로 Sheets 동기화 없음
   const handleUpdateCardPosition = (id: string, position: { x: number; y: number }) => {
     const updated = cards.map((c) => (c.id === id ? { ...c, position } : c));
     handleSyncCards(updated);
@@ -297,19 +302,7 @@ export default function Home() {
     }
 
     handleSyncCards(updated);
-
-    // 단방향 누적 추가: 신규 카드 등록 시에만 구글 스프레드시트에 백그라운드로 안전 전송 (CORS 영향 및 UI 렉 차단)
-    if (!exists && hasApi) {
-      // 4열(parentId)에 내부 ID 대신 부서명을 표시하도록 변환
-      const parentDeptNode = updated.find((c) => c.id === finalCard.parentId);
-      const cardForSheet = {
-        ...finalCard,
-        parentId: parentDeptNode?.label || finalCard.parentId || '',
-      };
-      appendCardToApi(cardForSheet).catch((err) => {
-        console.error('Background API Append error:', err);
-      });
-    }
+    syncCardsToSheets(updated); // 생성/수정 후 Sheets 전체 동기화 (중복 방지)
   };
 
   // 커스텀 부서 추가
@@ -360,6 +353,7 @@ export default function Home() {
           onDeleteCard={handleDeleteCard}
           onUpdateCardPosition={handleUpdateCardPosition}
           onBatchUpdatePositions={handleBatchUpdatePositions}
+          onSavePositions={syncCardsToSheets}
           onDoubleClickCard={handleDeptDoubleClick}
         />
       </main>

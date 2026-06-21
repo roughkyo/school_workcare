@@ -15,6 +15,7 @@ interface MindMapBoardProps {
   onUpdateCardPosition: (id: string, position: { x: number; y: number }) => void;
   onBatchUpdatePositions: (updates: { id: string; position: { x: number; y: number } }[]) => void;
   onDoubleClickCard?: (card: MindMapNode) => void;
+  onSavePositions?: (cards: MindMapNode[]) => void; // 위치저장 버튼 → Sheets 동기화
 }
 
 export default function MindMapBoard({
@@ -25,6 +26,7 @@ export default function MindMapBoard({
   onUpdateCardPosition,
   onBatchUpdatePositions,
   onDoubleClickCard,
+  onSavePositions,
 }: MindMapBoardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const transformRef = useRef<HTMLDivElement>(null);
@@ -693,6 +695,7 @@ export default function MindMapBoard({
             <button
               onClick={() => {
                 saveCards(cards);
+                onSavePositions?.(cards); // Sheets에도 위치 동기화
                 setSavedToast(true);
                 setTimeout(() => setSavedToast(false), 2000);
               }}
