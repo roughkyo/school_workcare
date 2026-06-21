@@ -81,12 +81,23 @@ export const INITIAL_CARDS: MindMapNode[] = [
 
 const CARDS_STORAGE_KEY = 'school-department-cards';
 const DEPARTMENTS_STORAGE_KEY = 'school-custom-departments';
+// 부서 초기 위치가 변경될 때마다 올려주면 기존 브라우저 캐시를 초기화
+const LAYOUT_VERSION = '3';
+const LAYOUT_VERSION_KEY = 'school-layout-version';
 
 const isClient = () => typeof window !== 'undefined';
 
 export function loadCards(): MindMapNode[] {
   if (!isClient()) return INITIAL_CARDS;
   try {
+    // 레이아웃 버전이 다르면 저장된 위치를 버리고 새 INITIAL_CARDS 사용
+    const storedVersion = localStorage.getItem(LAYOUT_VERSION_KEY);
+    if (storedVersion !== LAYOUT_VERSION) {
+      localStorage.removeItem(CARDS_STORAGE_KEY);
+      localStorage.setItem(LAYOUT_VERSION_KEY, LAYOUT_VERSION);
+      return INITIAL_CARDS;
+    }
+
     const saved = localStorage.getItem(CARDS_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved) as MindMapNode[];
@@ -131,6 +142,7 @@ export function saveCards(cards: MindMapNode[]): void {
   if (!isClient()) return;
   try {
     localStorage.setItem(CARDS_STORAGE_KEY, JSON.stringify(cards));
+    localStorage.setItem(LAYOUT_VERSION_KEY, LAYOUT_VERSION);
   } catch (error) {
     console.error('Error saving cards to localStorage:', error);
   }
