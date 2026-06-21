@@ -105,7 +105,7 @@ export default function DepartmentCard({
         정보부: 'from-violet-500/25 to-purple-600/25 border-purple-400/40 text-purple-700 dark:text-purple-200 shadow-purple-100/10',
         인문사회부: 'from-amber-500/25 to-orange-500/25 border-amber-400/40 text-amber-700 dark:text-amber-200 shadow-amber-100/10',
         수리과학부: 'from-red-500/25 to-rose-600/25 border-red-400/40 text-red-700 dark:text-red-200 shadow-red-100/10',
-        '문화예술 체육부': 'from-fuchsia-500/25 to-pink-600/25 border-fuchsia-400/40 text-fuchsia-700 dark:text-fuchsia-200 shadow-fuchsia-100/10',
+        '문화예술체육부': 'from-fuchsia-500/25 to-pink-600/25 border-fuchsia-400/40 text-fuchsia-700 dark:text-fuchsia-200 shadow-fuchsia-100/10',
         진로부: 'from-purple-500/25 to-fuchsia-500/25 border-purple-400/40 text-purple-700 dark:text-purple-200 shadow-purple-100/10',
         행정실: 'from-slate-600/25 to-slate-800/25 border-slate-400/40 text-slate-700 dark:text-slate-200 shadow-slate-200/10',
         도서부: 'from-orange-500/25 to-amber-600/25 border-orange-400/40 text-orange-700 dark:text-orange-200 shadow-orange-100/10',
