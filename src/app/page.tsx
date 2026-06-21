@@ -95,6 +95,12 @@ export default function Home() {
           const deptStructure = rawDeptStructure.map((card) => {
             let pos = card.position;
             
+            // 부서 카드(type === 'department')인 경우 parentId가 유실되었거나 올바르지 않으면 'center-gwangyang'으로 강제 보정
+            let parentId = card.parentId;
+            if (card.type === 'department') {
+              parentId = 'center-gwangyang';
+            }
+
             // 1. position 필드가 유효한지 검증 (x, y가 숫자이고 0,0 이 아닌지)
             const isValid =
               pos &&
@@ -119,13 +125,13 @@ export default function Home() {
                   y: pos.y + 44,
                 };
               }
-              return { ...card, position: pos };
+              return { ...card, parentId, position: pos };
             }
 
             // 2. 비정상 좌표인 경우 INITIAL_CARDS 기본 배치 복구 시도
             const fallbackPos = defaultPosMap.get(card.id);
             if (fallbackPos) {
-              return { ...card, position: { ...fallbackPos } };
+              return { ...card, parentId, position: { ...fallbackPos } };
             }
 
             // 3. INITIAL_CARDS에도 없는 커스텀 부서인 경우 동적 분산 스폰
