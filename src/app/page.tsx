@@ -60,158 +60,167 @@ export default function Home() {
 
     // Sheets에서 최신 데이터 로드 (읽기 전용 — 로드 시 Sheets에 쓰지 않음)
     if (apiExists) {
-      loadCardsFromSheets().then((sheetsCards) => {
-        if (!sheetsCards || sheetsCards.length === 0) return;
+      const cachedTimeStr = localStorage.getItem('school-cards-cache-time');
+      const cachedTime = cachedTimeStr ? parseInt(cachedTimeStr, 10) : 0;
+      const now = Date.now();
+      const CACHE_DURATION = 5 * 60 * 1000; // 5분 캐시
+      const isCacheExpired = now - cachedTime > CACHE_DURATION;
 
-        const sheetsHasDepts =
-          sheetsCards.some((c) => c.type === 'center') &&
-          sheetsCards.some((c) => c.type === 'department');
+      if (isCacheExpired) {
+        loadCardsFromSheets().then((sheetsCards) => {
+          if (!sheetsCards || sheetsCards.length === 0) return;
 
-        const rawDeptStructure = sheetsHasDepts
-          ? sheetsCards.filter((c) => c.type === 'center' || c.type === 'department')
-          : localCards.filter((c) => c.type === 'center' || c.type === 'department');
+          const sheetsHasDepts =
+            sheetsCards.some((c) => c.type === 'center') &&
+            sheetsCards.some((c) => c.type === 'department');
 
-        // INITIAL_CARDS 기준 기본 좌표 맵 생성
-        const defaultPosMap = new Map<string, { x: number; y: number }>(
-          INITIAL_CARDS.map((c) => [c.id, c.position])
-        );
+          const rawDeptStructure = sheetsHasDepts
+            ? sheetsCards.filter((c) => c.type === 'center' || c.type === 'department')
+            : localCards.filter((c) => c.type === 'center' || c.type === 'department');
 
-        // 부서 노드 좌표(position) 유효성 검증 및 복구
-        const rawCenter = rawDeptStructure.find((c) => c.type === 'center');
-        const rawCenterX = rawCenter?.position?.x;
-        const rawCenterY = rawCenter?.position?.y;
-        const isOldScale = typeof rawCenterX === 'number' && rawCenterX < 50;
-        const is2ndGenScale = typeof rawCenterX === 'number' && rawCenterX === 96 && rawCenterY === 72;
+          // INITIAL_CARDS 기준 기본 좌표 맵 생성
+          const defaultPosMap = new Map<string, { x: number; y: number }>(
+            INITIAL_CARDS.map((c) => [c.id, c.position])
+          );
 
-        let customDeptCount = 0; // 신규 커스텀 부서 분산 배치를 위한 카운터
+          // 부서 노드 좌표(position) 유효성 검증 및 복구
+          const rawCenter = rawDeptStructure.find((c) => c.type === 'center');
+          const rawCenterX = rawCenter?.position?.x;
+          const rawCenterY = rawCenter?.position?.y;
+          const isOldScale = typeof rawCenterX === 'number' && rawCenterX < 50;
+          const is2ndGenScale = typeof rawCenterX === 'number' && rawCenterX === 96 && rawCenterY === 72;
 
-        const deptStructure = rawDeptStructure.map((card) => {
-          let pos = card.position;
-          
-          // 1. position 필드가 유효한지 검증 (x, y가 숫자이고 0,0 이 아닌지)
-          const isValid =
-            pos &&
-            typeof pos.x === 'number' &&
-            typeof pos.y === 'number' &&
-            !isNaN(pos.x) &&
-            !isNaN(pos.y) &&
-            !(pos.x === 0 && pos.y === 0);
+          let customDeptCount = 0; // 신규 커스텀 부서 분산 배치를 위한 카운터
 
-          if (isValid) {
-            // 구버전 스케일(40px) 마이그레이션
-            if (isOldScale) {
-              pos = {
-                x: pos.x * 4 + 56,
-                y: pos.y * 4 + 44,
-              };
+          const deptStructure = rawDeptStructure.map((card) => {
+            let pos = card.position;
+            
+            // 1. position 필드가 유효한지 검증 (x, y가 숫자이고 0,0 이 아닌지)
+            const isValid =
+              pos &&
+              typeof pos.x === 'number' &&
+              typeof pos.y === 'number' &&
+              !isNaN(pos.x) &&
+              !isNaN(pos.y) &&
+              !(pos.x === 0 && pos.y === 0);
+
+            if (isValid) {
+              // 구버전 스케일(40px) 마이그레이션
+              if (isOldScale) {
+                pos = {
+                  x: pos.x * 4 + 56,
+                  y: pos.y * 4 + 44,
+                };
+              }
+              // 2세대 중앙 시프트 마이그레이션
+              else if (is2ndGenScale) {
+                pos = {
+                  x: pos.x + 56,
+                  y: pos.y + 44,
+                };
+              }
+              return { ...card, position: pos };
             }
-            // 2세대 중앙 시프트 마이그레이션
-            else if (is2ndGenScale) {
-              pos = {
-                x: pos.x + 56,
-                y: pos.y + 44,
-              };
+
+            // 2. 비정상 좌표인 경우 INITIAL_CARDS 기본 배치 복구 시도
+            const fallbackPos = defaultPosMap.get(card.id);
+            if (fallbackPos) {
+              return { ...card, position: { ...fallbackPos } };
             }
-            return { ...card, position: pos };
-          }
 
-          // 2. 비정상 좌표인 경우 INITIAL_CARDS 기본 배치 복구 시도
-          const fallbackPos = defaultPosMap.get(card.id);
-          if (fallbackPos) {
-            return { ...card, position: { ...fallbackPos } };
-          }
+            // 3. INITIAL_CARDS에도 없는 커스텀 부서인 경우 동적 분산 스폰
+            if (card.type === 'center') {
+              return { ...card, position: { x: 152, y: 116 } };
+            }
 
-          // 3. INITIAL_CARDS에도 없는 커스텀 부서인 경우 동적 분산 스폰
-          if (card.type === 'center') {
-            return { ...card, position: { x: 152, y: 116 } };
-          }
+            // 부서인 경우 중앙 노드 기준 적절한 빈 자리에 스폰 (사방 배치 오프셋 적용)
+            const refCenterX = 152;
+            const refCenterY = 116;
+            const offsets = [
+              { x: -8, y: -8 }, // 좌상
+              { x: 8, y: -8 },  // 우상
+              { x: -8, y: 8 },  // 좌하
+              { x: 8, y: 8 },   // 우하
+              { x: 0, y: 12 },  // 하단
+              { x: 0, y: -12 }, // 상단
+            ];
+            const offset = offsets[customDeptCount % offsets.length] || { x: 0, y: 8 };
+            customDeptCount++;
 
-          // 부서인 경우 중앙 노드 기준 적절한 빈 자리에 스폰 (사방 배치 오프셋 적용)
-          const refCenterX = 152;
-          const refCenterY = 116;
-          const offsets = [
-            { x: -8, y: -8 }, // 좌상
-            { x: 8, y: -8 },  // 우상
-            { x: -8, y: 8 },  // 좌하
-            { x: 8, y: 8 },   // 우하
-            { x: 0, y: 12 },  // 하단
-            { x: 0, y: -12 }, // 상단
-          ];
-          const offset = offsets[customDeptCount % offsets.length] || { x: 0, y: 8 };
-          customDeptCount++;
+            return {
+              ...card,
+              position: {
+                x: refCenterX + offset.x,
+                y: refCenterY + offset.y,
+              },
+            };
+          });
 
-          return {
-            ...card,
-            position: {
-              x: refCenterX + offset.x,
-              y: refCenterY + offset.y,
-            },
-          };
+          const sheetsLinks = sheetsCards.filter((c) => c.type === 'link');
+
+          // parentId가 부서명(label)으로 저장된 경우 실제 ID로 자동 변환
+          const labelToId = new Map(
+            deptStructure
+              .filter((c) => c.type === 'department')
+              .map((c) => [c.label, c.id])
+          );
+          const idSet = new Set(deptStructure.map((c) => c.id));
+
+          // parentId 부서명 → ID 변환
+          const resolvedLinks = sheetsLinks.map((card) => {
+            if (card.parentId && !idSet.has(card.parentId)) {
+              const resolvedId = labelToId.get(card.parentId);
+              if (resolvedId) return { ...card, parentId: resolvedId };
+            }
+            return card;
+          });
+
+          // 부서별 링크카드 인덱스를 추적하여 위치 재계산
+          const centerNode = deptStructure.find((c) => c.type === 'center');
+          const centerX = centerNode?.position.x ?? 152;
+          const centerY = centerNode?.position.y ?? 116;
+          const siblingCountMap = new Map<string, number>();
+
+          const repositionedLinks = resolvedLinks.map((card) => {
+            const parentDept = deptStructure.find((c) => c.id === card.parentId);
+            if (!parentDept) return card;
+
+            const parentId = card.parentId ?? '';
+            const sibIdx = siblingCountMap.get(parentId) ?? 0;
+            siblingCountMap.set(parentId, sibIdx + 1);
+
+            // 중앙→부서 방향 단위벡터
+            const dx = parentDept.position.x - centerX;
+            const dy = parentDept.position.y - centerY;
+            const len = Math.sqrt(dx * dx + dy * dy) || 1;
+            const ux = dx / len;
+            const uy = dy / len;
+            const px = -uy;
+            const py = ux;
+
+            // 형제 순서에 따른 수직 분산 (0, +1, -1, +2, -2...)
+            const perpIdx =
+              sibIdx === 0 ? 0
+              : sibIdx % 2 === 1 ? Math.ceil(sibIdx / 2)
+              : -(sibIdx / 2);
+
+            return {
+              ...card,
+              position: {
+                x: Math.max(0, Math.round(parentDept.position.x + ux * 20 + px * perpIdx * 15)),
+                y: Math.max(0, Math.round(parentDept.position.y + uy * 20 + py * perpIdx * 15)),
+              },
+            };
+          });
+
+          const merged = [...deptStructure, ...repositionedLinks];
+          setCards(merged);
+          saveCards(merged);
+          localStorage.setItem('school-cards-cache-time', Date.now().toString());
+          setTriggerCenter((n) => n + 1); // 로드 완료 후 광양고 중앙 정렬
+          // ⚠️ 로드 시 Sheets 쓰기 금지 — 다중 사용자 환경에서 데이터 충돌 방지
         });
-
-        const sheetsLinks = sheetsCards.filter((c) => c.type === 'link');
-
-        // parentId가 부서명(label)으로 저장된 경우 실제 ID로 자동 변환
-        const labelToId = new Map(
-          deptStructure
-            .filter((c) => c.type === 'department')
-            .map((c) => [c.label, c.id])
-        );
-        const idSet = new Set(deptStructure.map((c) => c.id));
-
-        // parentId 부서명 → ID 변환
-        const resolvedLinks = sheetsLinks.map((card) => {
-          if (card.parentId && !idSet.has(card.parentId)) {
-            const resolvedId = labelToId.get(card.parentId);
-            if (resolvedId) return { ...card, parentId: resolvedId };
-          }
-          return card;
-        });
-
-        // 부서별 링크카드 인덱스를 추적하여 위치 재계산
-        const centerNode = deptStructure.find((c) => c.type === 'center');
-        const centerX = centerNode?.position.x ?? 152;
-        const centerY = centerNode?.position.y ?? 116;
-        const siblingCountMap = new Map<string, number>();
-
-        const repositionedLinks = resolvedLinks.map((card) => {
-          const parentDept = deptStructure.find((c) => c.id === card.parentId);
-          if (!parentDept) return card;
-
-          const parentId = card.parentId ?? '';
-          const sibIdx = siblingCountMap.get(parentId) ?? 0;
-          siblingCountMap.set(parentId, sibIdx + 1);
-
-          // 중앙→부서 방향 단위벡터
-          const dx = parentDept.position.x - centerX;
-          const dy = parentDept.position.y - centerY;
-          const len = Math.sqrt(dx * dx + dy * dy) || 1;
-          const ux = dx / len;
-          const uy = dy / len;
-          const px = -uy;
-          const py = ux;
-
-          // 형제 순서에 따른 수직 분산 (0, +1, -1, +2, -2...)
-          const perpIdx =
-            sibIdx === 0 ? 0
-            : sibIdx % 2 === 1 ? Math.ceil(sibIdx / 2)
-            : -(sibIdx / 2);
-
-          return {
-            ...card,
-            position: {
-              x: Math.max(0, Math.round(parentDept.position.x + ux * 20 + px * perpIdx * 15)),
-              y: Math.max(0, Math.round(parentDept.position.y + uy * 20 + py * perpIdx * 15)),
-            },
-          };
-        });
-
-        const merged = [...deptStructure, ...repositionedLinks];
-        setCards(merged);
-        saveCards(merged);
-        setTriggerCenter((n) => n + 1); // 로드 완료 후 광양고 중앙 정렬
-        // ⚠️ 로드 시 Sheets 쓰기 금지 — 다중 사용자 환경에서 데이터 충돌 방지
-      });
+      }
     }
   }, []);
 
@@ -248,6 +257,7 @@ export default function Home() {
     if (sheetsDebounceRef.current) clearTimeout(sheetsDebounceRef.current);
     sheetsDebounceRef.current = setTimeout(() => {
       syncAllCardsToSheets(newCards);
+      localStorage.setItem('school-cards-cache-time', Date.now().toString());
     }, 500);
   };
 
@@ -317,6 +327,7 @@ export default function Home() {
 
       handleSyncCards(filtered);
       syncCardsToSheets(filtered); // 삭제 후 Sheets 동기화
+      localStorage.setItem('school-cards-cache-time', Date.now().toString());
     }
   };
 
@@ -427,6 +438,7 @@ export default function Home() {
 
     handleSyncCards(updated);
     syncCardsToSheets(updated); // 생성/수정 후 Sheets 전체 동기화 (중복 방지)
+    localStorage.setItem('school-cards-cache-time', Date.now().toString());
   };
 
   // 커스텀 부서 추가
