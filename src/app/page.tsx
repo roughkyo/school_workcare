@@ -61,7 +61,6 @@ export default function Home() {
     if (apiExists) {
       loadCardsFromSheets().then((sheetsCards) => {
         if (!sheetsCards || sheetsCards.length === 0) {
-          // Sheets가 비어있음 → 로컬 전체를 Sheets에 동기화
           syncAllCardsToSheets(localCards);
           return;
         }
@@ -70,23 +69,35 @@ export default function Home() {
           sheetsCards.some((c) => c.type === 'center') &&
           sheetsCards.some((c) => c.type === 'department');
 
-        if (sheetsHasDepts) {
-          // Sheets가 완전한 구조 → 그대로 사용
-          setCards(sheetsCards);
-          saveCards(sheetsCards);
-        } else {
-          // Sheets에 링크카드만 있는 경우:
-          // 로컬의 center+department 구조 + Sheets의 링크카드를 합침
-          const deptStructure = localCards.filter(
-            (c) => c.type === 'center' || c.type === 'department'
-          );
-          const sheetsLinks = sheetsCards.filter((c) => c.type === 'link');
-          const merged = [...deptStructure, ...sheetsLinks];
-          setCards(merged);
-          saveCards(merged);
-          // 합친 완전한 데이터를 Sheets에 동기화 (다음 접속부터 완전한 구조 유지)
-          syncAllCardsToSheets(merged);
-        }
+        // 부서 구조 결정: Sheets에 dept가 있으면 Sheets 사용, 없으면 로컬 사용
+        const deptStructure = sheetsHasDepts
+          ? sheetsCards.filter((c) => c.type === 'center' || c.type === 'department')
+          : localCards.filter((c) => c.type === 'center' || c.type === 'department');
+
+        const sheetsLinks = sheetsCards.filter((c) => c.type === 'link');
+
+        // parentId가 부서명(label)으로 저장된 경우 실제 ID로 변환
+        // (구버전 appendCardToApi가 ID 대신 label을 저장했던 문제 수정)
+        const labelToId = new Map(
+          deptStructure
+            .filter((c) => c.type === 'department')
+            .map((c) => [c.label, c.id])
+        );
+        const idSet = new Set(deptStructure.map((c) => c.id));
+
+        const resolvedLinks = sheetsLinks.map((card) => {
+          if (card.parentId && !idSet.has(card.parentId)) {
+            const resolvedId = labelToId.get(card.parentId);
+            if (resolvedId) return { ...card, parentId: resolvedId };
+          }
+          return card;
+        });
+
+        const merged = [...deptStructure, ...resolvedLinks];
+        setCards(merged);
+        saveCards(merged);
+        // Sheets에 올바른 ID 기반 데이터로 덮어쓰기 (이후 중복·오류 방지)
+        syncAllCardsToSheets(merged);
       });
     }
   }, []);
