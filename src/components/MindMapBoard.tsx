@@ -460,7 +460,7 @@ export default function MindMapBoard({
               {/* 1단계 부서 -> 중앙 노드 연결선 */}
               {centerNode &&
                 visibleCards.map((node) => {
-                  if (node.type !== 'department' || node.parentId !== centerNode.id) return null;
+                  if (node.type !== 'department') return null;
                   const centerA = getCardCenter(centerNode);
                   const centerB = getCardCenter(node);
 
