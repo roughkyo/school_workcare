@@ -55,21 +55,35 @@ export default function Home() {
     const localCards = loadCards();
     setCards(localCards);
 
-    // Sheets에서 최신 데이터 로드
+    // Sheets에서 최신 데이터 로드 후 병합
     if (apiExists) {
       loadCardsFromSheets().then((sheetsCards) => {
-        // Sheets에 center/department 노드가 없으면 구조가 깨진 것 → LocalStorage 사용 후 Sheets에 전체 동기화
-        const hasDeptStructure = sheetsCards &&
+        if (!sheetsCards || sheetsCards.length === 0) {
+          // Sheets가 비어있음 → 로컬 전체를 Sheets에 동기화
+          syncAllCardsToSheets(localCards);
+          return;
+        }
+
+        const sheetsHasDepts =
           sheetsCards.some((c) => c.type === 'center') &&
           sheetsCards.some((c) => c.type === 'department');
 
-        if (hasDeptStructure && sheetsCards) {
-          // Sheets 데이터가 완전한 경우 → 그대로 사용
+        if (sheetsHasDepts) {
+          // Sheets가 완전한 구조 → 그대로 사용
           setCards(sheetsCards);
           saveCards(sheetsCards);
         } else {
-          // Sheets 데이터가 불완전한 경우 → LocalStorage 데이터로 Sheets 복구
-          syncAllCardsToSheets(localCards);
+          // Sheets에 링크카드만 있는 경우:
+          // 로컬의 center+department 구조 + Sheets의 링크카드를 합침
+          const deptStructure = localCards.filter(
+            (c) => c.type === 'center' || c.type === 'department'
+          );
+          const sheetsLinks = sheetsCards.filter((c) => c.type === 'link');
+          const merged = [...deptStructure, ...sheetsLinks];
+          setCards(merged);
+          saveCards(merged);
+          // 합친 완전한 데이터를 Sheets에 동기화 (다음 접속부터 완전한 구조 유지)
+          syncAllCardsToSheets(merged);
         }
       });
     }
