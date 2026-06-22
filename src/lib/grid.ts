@@ -32,10 +32,15 @@ export function getDepartmentWidth(label: string, isLoggedIn: boolean): number {
  * 최소 80px, 최대 160px 범위 내에서 콤팩트하게 산출합니다.
  */
 export function getLinkWidth(label: string, isLoggedIn: boolean): number {
-  const baseSpacing = isLoggedIn ? 36 : 22; // 아이콘 여백 및 패딩 pr-1.5 공간 반영
-  const maxInnerWidth = 160 - baseSpacing; // 내부 텍스트 가용 최대 폭 (12글자 한계 = 약 125px)
+  // 로그인/로그아웃 상태에 따른 너비 사양 완전 분리
+  const baseSpacing = isLoggedIn ? 36 : 20;
+  const minWidth = isLoggedIn ? 122 : 90;
+  const maxWidth = isLoggedIn ? 185 : 150;
+  
+  // 줄바꿈이 발생했을 때의 카드 최소 안전 너비 (세로로 4줄~6줄 길어지는 현상 방지)
+  const minWidthForWrapped = isLoggedIn ? 152 : 120;
 
-  // 한글/영문/숫자별 글자 너비 가중 실측 함수 (실제 브라우저 렌더링에 매칭)
+  // 한글/영문/숫자별 글자 너비 가중 실측 함수
   const getStrWidth = (str: string) => {
     let w = 0;
     for (let i = 0; i < str.length; i++) {
@@ -55,18 +60,20 @@ export function getLinkWidth(label: string, isLoggedIn: boolean): number {
   const totalLength = label.length; // 공백 포함 글자수
 
   // 공백 포함 12자 이하이고, 가용 너비를 넘지 않는 경우 -> 줄바꿈 없이 한 줄로 콤팩트하게 처리
+  const maxInnerWidth = maxWidth - baseSpacing;
   if (totalLength <= 12 && totalTextWidth <= maxInnerWidth) {
     const finalW = totalTextWidth + baseSpacing;
-    return Math.round(Math.max(80, Math.min(160, finalW)));
+    return Math.round(Math.max(minWidth, Math.min(maxWidth, finalW)));
   }
 
   // 12자를 초과하거나 한 줄 가용 너비를 넘는 경우 -> 균형 있는 2줄 개행 유도
   const words = label.split(/\s+/).filter(Boolean);
   
   if (words.length <= 1) {
-    // 단어가 1개밖에 없어서 공백 분할이 불가능한 경우 (예: '광양고리로스쿨') -> 그대로 반환
+    // 단어가 1개밖에 없어서 공백 분할이 불가능한 경우 (예: '광양고리로스쿨') -> 그대로 반환하되, 개행 발생 시 minWidthForWrapped 보장
     const finalW = totalTextWidth + baseSpacing;
-    return Math.round(Math.max(80, Math.min(160, finalW)));
+    const finalMin = totalTextWidth > maxInnerWidth ? minWidthForWrapped : minWidth;
+    return Math.round(Math.max(finalMin, Math.min(maxWidth, finalW)));
   }
 
   // 단어가 2개 이상일 때: 앞줄과 뒷줄의 너비 편차가 최소가 되는 최적의 분할 지점(split index) 탐색
@@ -94,5 +101,6 @@ export function getLinkWidth(label: string, isLoggedIn: boolean): number {
   const finalTextWidth = Math.max(getStrWidth(frontLine), getStrWidth(backLine));
 
   const finalW = finalTextWidth + baseSpacing;
-  return Math.round(Math.max(80, Math.min(160, finalW)));
+  // 줄바꿈이 발생했으므로 minWidthForWrapped를 보장하여 카드 세로 길어짐 방지
+  return Math.round(Math.max(minWidthForWrapped, Math.min(maxWidth, finalW)));
 }

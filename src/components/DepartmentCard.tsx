@@ -57,8 +57,10 @@ export default function DepartmentCard({
       case 'link':
       default: {
         const linkWidth = getLinkWidth(label, isLoggedIn);
-        // 최대 너비를 160px로 제한하여 글자 수 12자 초과 시 예쁘게 줄바꿈이 일어나도록 제약하고 픽셀폭을 타이트하게 고정합니다
-        return { width: `${linkWidth}px`, minWidth: '80px', maxWidth: '160px', height: 'auto', minHeight: '36px' };
+        const minW = isLoggedIn ? '122px' : '90px';
+        const maxW = isLoggedIn ? '185px' : '150px';
+        // 로그인 여부에 비례하여 가로 한계를 확장함으로써 아이콘이 생겼을 때 카드 가로폭이 자연스럽게 늘어나게 합니다.
+        return { width: `${linkWidth}px`, minWidth: minW, maxWidth: maxW, height: 'auto', minHeight: '36px' };
       }
     }
   };
