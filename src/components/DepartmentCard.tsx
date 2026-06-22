@@ -56,8 +56,8 @@ export default function DepartmentCard({
         return { width: `${deptWidth}px`, height: '60px', minHeight: undefined };
       case 'link':
       default: {
-        // 가변 너비: 최소 100px, 최대 200px, 텍스트는 줄바꿈으로 박스 안에 표시
-        return { width: undefined, minWidth: '100px', maxWidth: '200px', height: 'auto', minHeight: '36px' };
+        // 가변 너비: 최소 80px, 최대 160px, 텍스트는 줄바꿈으로 박스 안에 표시 (fit-content로 가로 빈공간 제거)
+        return { width: 'fit-content', minWidth: '80px', maxWidth: '160px', height: 'auto', minHeight: '36px' };
       }
     }
   };
@@ -67,7 +67,8 @@ export default function DepartmentCard({
   const style: React.CSSProperties = {};
   if (!isMobile) {
     if (card.type === 'link') {
-      // 링크 카드: 고정 width 없이 min/max로 가변 — 텍스트 줄바꿈으로 박스 초과 방지
+      // 링크 카드: fit-content와 min/max를 사용해 텍스트 개행에 맞춰 가로폭을 타이트하게 조절
+      style.width = dim.width;
       style.minWidth = dim.minWidth;
       style.maxWidth = dim.maxWidth;
       style.minHeight = dim.minHeight;

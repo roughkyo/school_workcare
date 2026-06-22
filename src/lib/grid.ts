@@ -28,11 +28,11 @@ export function getDepartmentWidth(label: string, isLoggedIn: boolean): number {
 
 /**
  * 업무 링크 카드(link)의 가변 너비를 업무명 길이 기반으로 계산합니다.
- * 최소 100px, 최대 220px 범위 내에서 콤팩트하게 산출합니다.
+ * 최소 80px, 최대 160px 범위 내에서 콤팩트하게 산출합니다.
  */
 export function getLinkWidth(label: string, isLoggedIn: boolean): number {
   const charCount = label.length;
-  const baseSpacing = isLoggedIn ? 52 : 28;
-  const estimatedWidth = charCount * 12 + baseSpacing;
-  return Math.round(Math.max(100, Math.min(220, estimatedWidth)));
+  const baseSpacing = isLoggedIn ? 44 : 24;
+  const estimatedWidth = charCount * 11 + baseSpacing;
+  return Math.round(Math.max(80, Math.min(160, estimatedWidth)));
 }
