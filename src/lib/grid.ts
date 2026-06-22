@@ -32,8 +32,8 @@ export function getDepartmentWidth(label: string, isLoggedIn: boolean): number {
  * 최소 80px, 최대 160px 범위 내에서 콤팩트하게 산출합니다.
  */
 export function getLinkWidth(label: string, isLoggedIn: boolean): number {
-  const baseSpacing = isLoggedIn ? 32 : 18; // 로그인/로그아웃 시 실측 아이콘+패딩 간격 최적화
-  const maxInnerWidth = 190 - baseSpacing; // 내부 텍스트 가용 최대 폭
+  const baseSpacing = isLoggedIn ? 36 : 22; // 아이콘 여백 및 패딩 pr-1.5 공간 반영
+  const maxInnerWidth = 160 - baseSpacing; // 내부 텍스트 가용 최대 폭 (12글자 한계 = 약 125px)
 
   // 한글/영문/숫자별 글자 너비 가중 실측 함수 (실제 브라우저 렌더링에 매칭)
   const getStrWidth = (str: string) => {
@@ -41,7 +41,7 @@ export function getLinkWidth(label: string, isLoggedIn: boolean): number {
     for (let i = 0; i < str.length; i++) {
       const code = str.charCodeAt(i);
       if (code > 127) {
-        w += 10.5; // CJK 한글 한 글자당 10.5px로 변경
+        w += 10.5; // CJK 한글 한 글자당 10.5px
       } else if (str[i] === ' ') {
         w += 4.5; // 공백은 4.5px
       } else {
@@ -52,43 +52,47 @@ export function getLinkWidth(label: string, isLoggedIn: boolean): number {
   };
 
   const totalTextWidth = getStrWidth(label);
+  const totalLength = label.length; // 공백 포함 글자수
 
-  // 한 줄로 다 들어가는 경우
-  if (totalTextWidth <= maxInnerWidth) {
+  // 공백 포함 12자 이하이고, 가용 너비를 넘지 않는 경우 -> 줄바꿈 없이 한 줄로 콤팩트하게 처리
+  if (totalLength <= 12 && totalTextWidth <= maxInnerWidth) {
     const finalW = totalTextWidth + baseSpacing;
-    return Math.round(Math.max(80, Math.min(190, finalW)));
+    return Math.round(Math.max(80, Math.min(160, finalW)));
   }
 
-  // 190px를 초과해 줄바꿈이 발생하는 경우: 공백 기준으로 단어를 조합해 개행을 모방함
-  const words = label.split(/\s+/);
-  const lines: string[] = [];
-  let currentLine = '';
+  // 12자를 초과하거나 한 줄 가용 너비를 넘는 경우 -> 균형 있는 2줄 개행 유도
+  const words = label.split(/\s+/).filter(Boolean);
+  
+  if (words.length <= 1) {
+    // 단어가 1개밖에 없어서 공백 분할이 불가능한 경우 (예: '광양고리로스쿨') -> 그대로 반환
+    const finalW = totalTextWidth + baseSpacing;
+    return Math.round(Math.max(80, Math.min(160, finalW)));
+  }
 
-  for (const word of words) {
-    if (!word) continue;
-    const testLine = currentLine ? `${currentLine} ${word}` : word;
-    if (getStrWidth(testLine) <= maxInnerWidth) {
-      currentLine = testLine;
-    } else {
-      if (currentLine) {
-        lines.push(currentLine);
-      }
-      currentLine = word;
+  // 단어가 2개 이상일 때: 앞줄과 뒷줄의 너비 편차가 최소가 되는 최적의 분할 지점(split index) 탐색
+  let minMaxLw = Infinity;
+  let bestSplitIdx = 1;
+
+  for (let i = 1; i < words.length; i++) {
+    const frontLine = words.slice(0, i).join(' ');
+    const backLine = words.slice(i).join(' ');
+    
+    const frontW = getStrWidth(frontLine);
+    const backW = getStrWidth(backLine);
+    
+    const maxLw = Math.max(frontW, backW);
+    
+    if (maxLw < minMaxLw) {
+      minMaxLw = maxLw;
+      bestSplitIdx = i;
     }
   }
-  if (currentLine) {
-    lines.push(currentLine);
-  }
 
-  // 줄바꿈된 행들 중 가장 너비가 긴 행의 픽셀값 산출
-  let maxLineWidth = 0;
-  for (const line of lines) {
-    const lw = getStrWidth(line);
-    if (lw > maxLineWidth) {
-      maxLineWidth = lw;
-    }
-  }
+  // 가장 균형 있는 분할 지점으로 나눈 두 줄의 너비 중 더 큰 쪽을 사용
+  const frontLine = words.slice(0, bestSplitIdx).join(' ');
+  const backLine = words.slice(bestSplitIdx).join(' ');
+  const finalTextWidth = Math.max(getStrWidth(frontLine), getStrWidth(backLine));
 
-  const finalW = maxLineWidth + baseSpacing;
-  return Math.round(Math.max(80, Math.min(190, finalW)));
+  const finalW = finalTextWidth + baseSpacing;
+  return Math.round(Math.max(80, Math.min(160, finalW)));
 }

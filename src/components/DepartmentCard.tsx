@@ -57,8 +57,8 @@ export default function DepartmentCard({
       case 'link':
       default: {
         const linkWidth = getLinkWidth(label, isLoggedIn);
-        // 최대 너비를 190px로 넓혀 짧은 카드가 어설프게 줄바꿈되는 것을 방지하고 픽셀폭을 타이트하게 고정합니다
-        return { width: `${linkWidth}px`, minWidth: '80px', maxWidth: '190px', height: 'auto', minHeight: '36px' };
+        // 최대 너비를 160px로 제한하여 글자 수 12자 초과 시 예쁘게 줄바꿈이 일어나도록 제약하고 픽셀폭을 타이트하게 고정합니다
+        return { width: `${linkWidth}px`, minWidth: '80px', maxWidth: '160px', height: 'auto', minHeight: '36px' };
       }
     }
   };
@@ -258,7 +258,7 @@ export default function DepartmentCard({
       `}
     >
       {/* 업무명 (항상 표시 - 12글자 초과 시 자동 2줄 허용) */}
-      <span className={`text-[11px] font-bold break-keep break-words whitespace-normal leading-tight w-auto flex-none transition-colors duration-200 ${
+      <span className={`text-[11px] font-bold break-keep break-words whitespace-normal leading-tight flex-1 min-w-0 pr-1.5 transition-colors duration-200 ${
         showHighlight
           ? 'text-orange-700 dark:text-orange-300'
           : 'text-slate-700 dark:text-slate-200'
