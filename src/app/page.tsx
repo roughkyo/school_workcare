@@ -73,12 +73,21 @@ export default function Home() {
         if (!sheetsCards || sheetsCards.length === 0) return;
         setHasApi(true);
 
+          // id 기준 중복 제거 처리 (최신 데이터를 우선함)
+          const uniqueCardsMap = new Map<string, MindMapNode>();
+          sheetsCards.forEach((card) => {
+            if (card && card.id) {
+              uniqueCardsMap.set(card.id, card);
+            }
+          });
+          const uniqueSheetsCards = Array.from(uniqueCardsMap.values());
+
           const sheetsHasDepts =
-            sheetsCards.some((c) => c.type === 'center') &&
-            sheetsCards.some((c) => c.type === 'department');
+            uniqueSheetsCards.some((c) => c.type === 'center') &&
+            uniqueSheetsCards.some((c) => c.type === 'department');
 
           const rawDeptStructure = sheetsHasDepts
-            ? sheetsCards.filter((c) => c.type === 'center' || c.type === 'department')
+            ? uniqueSheetsCards.filter((c) => c.type === 'center' || c.type === 'department')
             : localCards.filter((c) => c.type === 'center' || c.type === 'department');
 
           // INITIAL_CARDS 기준 기본 좌표 맵 생성
@@ -165,7 +174,7 @@ export default function Home() {
             };
           });
 
-          const sheetsLinks = sheetsCards.filter((c) => c.type === 'link');
+          const sheetsLinks = uniqueSheetsCards.filter((c) => c.type === 'link');
 
           // parentId가 부서명(label)으로 저장된 경우 실제 ID로 자동 변환 (공백 제거 후 비교로 오타 방지)
           const normalizeStr = (str: string) => str.replace(/\s+/g, '');

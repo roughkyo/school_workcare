@@ -195,11 +195,29 @@ export async function loadCardsFromSheets(): Promise<MindMapNode[] | null> {
 /** Sheets에 전체 카드 덮어쓰기 동기화 (서버 API 경유) */
 export async function syncAllCardsToSheets(cards: MindMapNode[]): Promise<boolean> {
   try {
+    // 1단계 부서 ID -> 한글 부서명(label) 매핑 맵 생성
+    const departments = cards.filter((c) => c.type === 'department');
+    const idToLabelMap = new Map(departments.map((d) => [d.id, d.label]));
+
+    // 2단계 링크 카드의 parentId를 한글 부서명으로 치환하여 복사본 생성
+    const transformedCards = cards.map((c) => {
+      if (c.type === 'link' && c.parentId) {
+        const deptLabel = idToLabelMap.get(c.parentId);
+        if (deptLabel) {
+          return {
+            ...c,
+            parentId: deptLabel,
+          };
+        }
+      }
+      return c;
+    });
+
     const res = await fetch('/api/cards', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'syncAll', cards }),
+      body: JSON.stringify({ action: 'syncAll', cards: transformedCards }),
     });
     return res.ok;
   } catch (err) {
