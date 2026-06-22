@@ -32,20 +32,20 @@ export function getDepartmentWidth(label: string, isLoggedIn: boolean): number {
  * 최소 80px, 최대 160px 범위 내에서 콤팩트하게 산출합니다.
  */
 export function getLinkWidth(label: string, isLoggedIn: boolean): number {
-  const baseSpacing = isLoggedIn ? 44 : 24; // 아이콘 여백
+  const baseSpacing = isLoggedIn ? 32 : 18; // 로그인/로그아웃 시 실측 아이콘+패딩 간격 최적화
   const maxInnerWidth = 190 - baseSpacing; // 내부 텍스트 가용 최대 폭
 
-  // 한글/영문/숫자별 글자 너비 가중 실측 함수
+  // 한글/영문/숫자별 글자 너비 가중 실측 함수 (실제 브라우저 렌더링에 매칭)
   const getStrWidth = (str: string) => {
     let w = 0;
     for (let i = 0; i < str.length; i++) {
       const code = str.charCodeAt(i);
       if (code > 127) {
-        w += 11.2; // CJK 한글 한 글자당 11.2px
+        w += 10.5; // CJK 한글 한 글자당 10.5px로 변경
       } else if (str[i] === ' ') {
-        w += 5; // 공백은 5px
+        w += 4.5; // 공백은 4.5px
       } else {
-        w += 7.2; // 숫자 및 로마자 알파벳
+        w += 6.5; // 숫자 및 로마자 알파벳
       }
     }
     return w;
