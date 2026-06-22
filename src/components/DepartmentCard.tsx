@@ -256,7 +256,7 @@ export default function DepartmentCard({
       `}
     >
       {/* 업무명 (항상 표시 - 12글자 초과 시 자동 2줄 허용) */}
-      <span className={`text-[11px] font-bold break-words whitespace-normal leading-tight flex-1 transition-colors duration-200 ${
+      <span className={`text-[11px] font-bold break-keep break-words whitespace-normal leading-tight flex-1 transition-colors duration-200 ${
         showHighlight
           ? 'text-orange-700 dark:text-orange-300'
           : 'text-slate-700 dark:text-slate-200'
