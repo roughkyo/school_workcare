@@ -33,7 +33,7 @@ export function getDepartmentWidth(label: string, isLoggedIn: boolean): number {
  */
 export function getLinkWidth(label: string, isLoggedIn: boolean): number {
   const baseSpacing = isLoggedIn ? 44 : 24; // 아이콘 여백
-  const maxInnerWidth = 160 - baseSpacing; // 내부 텍스트 가용 최대 폭
+  const maxInnerWidth = 190 - baseSpacing; // 내부 텍스트 가용 최대 폭
 
   // 한글/영문/숫자별 글자 너비 가중 실측 함수
   const getStrWidth = (str: string) => {
@@ -56,10 +56,10 @@ export function getLinkWidth(label: string, isLoggedIn: boolean): number {
   // 한 줄로 다 들어가는 경우
   if (totalTextWidth <= maxInnerWidth) {
     const finalW = totalTextWidth + baseSpacing;
-    return Math.round(Math.max(80, Math.min(160, finalW)));
+    return Math.round(Math.max(80, Math.min(190, finalW)));
   }
 
-  // 160px를 초과해 줄바꿈이 발생하는 경우: 공백 기준으로 단어를 조합해 개행을 모방함
+  // 190px를 초과해 줄바꿈이 발생하는 경우: 공백 기준으로 단어를 조합해 개행을 모방함
   const words = label.split(/\s+/);
   const lines: string[] = [];
   let currentLine = '';
@@ -90,5 +90,5 @@ export function getLinkWidth(label: string, isLoggedIn: boolean): number {
   }
 
   const finalW = maxLineWidth + baseSpacing;
-  return Math.round(Math.max(80, Math.min(160, finalW)));
+  return Math.round(Math.max(80, Math.min(190, finalW)));
 }

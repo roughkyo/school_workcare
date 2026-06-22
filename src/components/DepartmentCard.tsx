@@ -57,8 +57,8 @@ export default function DepartmentCard({
       case 'link':
       default: {
         const linkWidth = getLinkWidth(label, isLoggedIn);
-        // 줄바꿈 후 가장 긴 행의 너비를 예측 픽셀값으로 지정하여 가로 빈공간을 완전히 제거합니다
-        return { width: `${linkWidth}px`, minWidth: '80px', maxWidth: '160px', height: 'auto', minHeight: '36px' };
+        // 최대 너비를 190px로 넓혀 짧은 카드가 어설프게 줄바꿈되는 것을 방지하고 픽셀폭을 타이트하게 고정합니다
+        return { width: `${linkWidth}px`, minWidth: '80px', maxWidth: '190px', height: 'auto', minHeight: '36px' };
       }
     }
   };
