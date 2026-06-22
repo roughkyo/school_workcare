@@ -56,8 +56,9 @@ export default function DepartmentCard({
         return { width: `${deptWidth}px`, height: '60px', minHeight: undefined };
       case 'link':
       default: {
-        // 가변 너비: 최소 80px, 최대 160px, 텍스트는 줄바꿈으로 박스 안에 표시 (fit-content로 가로 빈공간 제거)
-        return { width: 'fit-content', minWidth: '80px', maxWidth: '160px', height: 'auto', minHeight: '36px' };
+        const linkWidth = getLinkWidth(label, isLoggedIn);
+        // 줄바꿈 후 가장 긴 행의 너비를 예측 픽셀값으로 지정하여 가로 빈공간을 완전히 제거합니다
+        return { width: `${linkWidth}px`, minWidth: '80px', maxWidth: '160px', height: 'auto', minHeight: '36px' };
       }
     }
   };
