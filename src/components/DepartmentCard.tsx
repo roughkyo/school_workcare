@@ -42,6 +42,10 @@ export default function DepartmentCard({
 }: DepartmentCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
 
+  // '교무실대시보드' (공백 제거 기준) 업무 카드는 상시 하이라이트 효과 기본 적용
+  const isDashboardNode = card.type === 'link' && card.label.replace(/\s+/g, '') === '교무실대시보드';
+  const showHighlight = isHighlighted || isDashboardNode;
+
   // 노드 종류별 고정/가변 픽셀 규격
   const getDimension = (type: typeof card.type, label: string) => {
     switch (type) {
@@ -243,16 +247,17 @@ export default function DepartmentCard({
         group border-2 flex items-center gap-1.5 select-none
         transition-all duration-200
         ${isDragging ? 'z-[200]' : 'z-10 hover:z-[150]'}
-        ${isHighlighted
+        ${showHighlight
           ? 'border-orange-400 bg-orange-50/95 dark:bg-orange-950/60 dark:border-orange-500 shadow-lg shadow-orange-100/60 dark:shadow-orange-900/30 scale-[1.04]'
           : 'border-indigo-300 dark:border-indigo-600 bg-white/98 dark:bg-slate-900/98 hover:border-indigo-500 hover:shadow-lg dark:hover:border-indigo-400'
         }
-        ${isDragging ? 'shadow-xl scale-105 rotate-1 cursor-grabbing' : isHighlighted ? '' : 'shadow-md hover:-translate-y-0.5'}
+        ${isDragging ? 'shadow-xl scale-105 rotate-1 cursor-grabbing' : showHighlight ? '' : 'shadow-md hover:-translate-y-0.5'}
+        ${isDashboardNode ? 'animate-pulse' : ''}
       `}
     >
       {/* 업무명 (항상 표시 - 12글자 초과 시 자동 2줄 허용) */}
       <span className={`text-[11px] font-bold break-words whitespace-normal leading-tight flex-1 transition-colors duration-200 ${
-        isHighlighted
+        showHighlight
           ? 'text-orange-700 dark:text-orange-300'
           : 'text-slate-700 dark:text-slate-200'
       }`}>
