@@ -34,6 +34,7 @@ export default function MindMapBoard({
   const transformRef = useRef<HTMLDivElement>(null);
   
   const [isMobile, setIsMobile] = useState(false);
+  const [mobileViewMode, setMobileViewMode] = useState<'canvas' | 'list'>('list');
   const [showConnectionsMobile, setShowConnectionsMobile] = useState(true);
   // 필터: 'all' = 전체 부서 보기, 'with-links' = 업무카드 있는 부서만 보기
   const [deptFilter, setDeptFilter] = useState<'all' | 'with-links'>('all');
@@ -100,6 +101,9 @@ export default function MindMapBoard({
       setIsMobile(mobile);
       if (!mobile) {
         centerGwangyangOnScreen(zoom);
+      } else {
+        setZoom(0.45);
+        setTimeout(() => centerGwangyangOnScreen(0.45), 100);
       }
     };
 
@@ -109,6 +113,9 @@ export default function MindMapBoard({
     const timer = setTimeout(() => {
       if (window.innerWidth >= 768) {
         centerGwangyangOnScreen(zoom);
+      } else {
+        setZoom(0.45);
+        setTimeout(() => centerGwangyangOnScreen(0.45), 50);
       }
     }, 100);
 
@@ -118,6 +125,15 @@ export default function MindMapBoard({
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 모바일 캔버스 뷰 진입 시 줌 및 화면 중앙 배율 조절
+  useEffect(() => {
+    if (isMobile && mobileViewMode === 'canvas') {
+      setZoom(0.45);
+      setTimeout(() => centerGwangyangOnScreen(0.45), 50);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mobileViewMode, isMobile]);
 
   // Sheets 로드 완료 등 외부에서 중앙 정렬 요청 시
   useEffect(() => {
@@ -129,7 +145,7 @@ export default function MindMapBoard({
   // 3. 마우스 휠 줌(Zoom) 브라우저 기본 스크롤 차단 리스너 (Passive = false 강제)
   useEffect(() => {
     const container = containerRef.current;
-    if (!container || isMobile) return;
+    if (!container || (isMobile && mobileViewMode === 'list')) return;
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
@@ -200,7 +216,7 @@ export default function MindMapBoard({
 
   // 5. 마우스 다운 (보드 배경 빈곳 클릭 시 드래그 팬 시작 + 부서 선택 해제)
   const handleBoardMouseDown = (e: React.MouseEvent) => {
-    if (isMobile) return;
+    if (isMobile && mobileViewMode === 'list') return;
 
     const target = e.target as HTMLElement;
     const isNode = target.closest('[data-card-id]');
@@ -214,7 +230,7 @@ export default function MindMapBoard({
   };
 
   const handleBoardTouchStart = (e: React.TouchEvent) => {
-    if (isMobile) return;
+    if (isMobile && mobileViewMode === 'list') return;
     
     const target = e.target as HTMLElement;
     const isNode = target.closest('[data-card-id]');
@@ -311,8 +327,9 @@ export default function MindMapBoard({
   };
 
   const handleResetZoom = () => {
-    setZoom(0.85);
-    centerGwangyangOnScreen(0.85);
+    const defaultZoom = isMobile ? 0.45 : 0.85;
+    setZoom(defaultZoom);
+    centerGwangyangOnScreen(defaultZoom);
   };
 
   // 노드 중심점 계산
@@ -366,14 +383,34 @@ export default function MindMapBoard({
       <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900/50">
         <div className="flex items-center gap-2">
           {isMobile ? (
-            <>
-              <List className="h-4 w-4 text-indigo-500" />
-              <span className="text-slate-800 dark:text-slate-200">모바일 아코디언 트리 구조</span>
-            </>
+            <div className="flex bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+              <button
+                onClick={() => setMobileViewMode('list')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-md transition-all text-[11px] ${
+                  mobileViewMode === 'list'
+                    ? 'bg-white text-indigo-600 shadow-sm font-bold'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <List className="h-3.5 w-3.5" />
+                <span>목록 뷰</span>
+              </button>
+              <button
+                onClick={() => setMobileViewMode('canvas')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-md transition-all text-[11px] ${
+                  mobileViewMode === 'canvas'
+                    ? 'bg-white text-indigo-600 shadow-sm font-bold'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Network className="h-3.5 w-3.5" />
+                <span>캔버스 뷰</span>
+              </button>
+            </div>
           ) : (
             <div className="flex items-center gap-2.5">
               <Network className="h-4 w-4 text-indigo-500" />
-              <span className="text-slate-800 dark:text-slate-200">방사형 마인드맵 캔버스</span>
+              <span className="text-slate-800">방사형 마인드맵 캔버스</span>
               <span className="hidden sm:inline text-slate-400">|</span>
               <span className="hidden sm:inline text-slate-400 font-normal">
                 [마우스 드래그] 화면 이동 &nbsp;&nbsp; [휠 스크롤] 확대/축소
@@ -382,10 +419,10 @@ export default function MindMapBoard({
           )}
         </div>
 
-        {isMobile && (
+        {isMobile && mobileViewMode === 'list' && (
           <button
             onClick={() => setShowConnectionsMobile(!showConnectionsMobile)}
-            className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+            className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-slate-700 hover:bg-slate-200 transition-colors"
           >
             {showConnectionsMobile ? (
               <>
@@ -402,7 +439,7 @@ export default function MindMapBoard({
         )}
 
         {!isMobile && isLoggedIn && (
-          <span className="text-emerald-600 dark:text-emerald-400">
+          <span className="text-emerald-600">
             💡 카드를 원하는 그리드로 드래그해서 배치해보세요.
           </span>
         )}
@@ -423,7 +460,7 @@ export default function MindMapBoard({
           ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}
         `}
       >
-        {!isMobile ? (
+        {(!isMobile || mobileViewMode === 'canvas') ? (
           /* ================= 데스크톱 마인드맵 뷰 (Pan & Zoom) ================= */
           <div
             ref={transformRef}
@@ -903,8 +940,8 @@ export default function MindMapBoard({
           );
         })()}
 
-        {/* ================= 줌/팬 플로팅 컨트롤러 Widget (데스크톱 전용) ================= */}
-        {!isMobile && (
+        {/* ================= 줌/팬 플로팅 컨트롤러 Widget (데스크톱 및 모바일 캔버스 지원) ================= */}
+        {(!isMobile || mobileViewMode === 'canvas') && (
           <div className="absolute bottom-6 left-6 z-40 flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-white/85 p-1.5 shadow-xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/85">
             <button
               onClick={handleZoomOut}
