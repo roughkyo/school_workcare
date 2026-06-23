@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Network, List, Eye, EyeOff, LayoutGrid, ZoomIn, ZoomOut, Maximize2, Layers, Filter, Save, Check, BookOpen, ExternalLink, X } from 'lucide-react';
+import { Network, List, Eye, EyeOff, LayoutGrid, ZoomIn, ZoomOut, Maximize2, Layers, Filter, Save, Check, BookOpen, ExternalLink, X, ChevronLeft } from 'lucide-react';
 import { saveCards } from '@/lib/card-data';
 import { MindMapNode } from '@/types/department-card';
 import DepartmentCard from './DepartmentCard';
@@ -35,6 +35,7 @@ export default function MindMapBoard({
   
   const [isMobile, setIsMobile] = useState(false);
   const [mobileViewMode, setMobileViewMode] = useState<'canvas' | 'list'>('list');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [showConnectionsMobile, setShowConnectionsMobile] = useState(true);
   // 필터: 'all' = 전체 부서 보기, 'with-links' = 업무카드 있는 부서만 보기
   const [deptFilter, setDeptFilter] = useState<'all' | 'with-links'>('all');
@@ -102,6 +103,7 @@ export default function MindMapBoard({
       if (!mobile) {
         centerGwangyangOnScreen(zoom);
       } else {
+        setIsSidebarCollapsed(true);
         setZoom(0.45);
         setTimeout(() => centerGwangyangOnScreen(0.45), 100);
       }
@@ -114,6 +116,7 @@ export default function MindMapBoard({
       if (window.innerWidth >= 768) {
         centerGwangyangOnScreen(zoom);
       } else {
+        setIsSidebarCollapsed(true);
         setZoom(0.45);
         setTimeout(() => centerGwangyangOnScreen(0.45), 50);
       }
@@ -673,10 +676,19 @@ export default function MindMapBoard({
         )}
 
         {/* ================= 왼쪽 중간 필터/저장 메뉴바 ================= */}
-        <div
-          className="absolute left-4 top-4 bottom-4 z-40 flex flex-col gap-2 rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90 overflow-y-auto"
-          style={{ width: sidebarWidth }}
-        >
+        {isSidebarCollapsed ? (
+          <button
+            onClick={() => setIsSidebarCollapsed(false)}
+            title="메뉴바 펼치기"
+            className="absolute left-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/80 bg-white/90 shadow-xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90 text-indigo-650 hover:bg-slate-50 active:scale-95 transition-all"
+          >
+            <Filter className="h-5 w-5 text-indigo-500" />
+          </button>
+        ) : (
+          <div
+            className="absolute left-4 top-4 bottom-4 z-40 flex flex-col gap-2 rounded-2xl border border-slate-200/80 bg-white/90 p-3 shadow-xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90 overflow-y-auto"
+            style={{ width: sidebarWidth }}
+          >
           {/* 오른쪽 드래그 핸들 */}
           <div
             onMouseDown={(e) => {
@@ -708,9 +720,18 @@ export default function MindMapBoard({
             return (<>
           {/* 필터 섹션 */}
           {!collapsed && (
-            <div className="flex items-center gap-1.5 pb-2 border-b border-slate-200 dark:border-slate-700">
-              <Filter className="h-3.5 w-3.5 text-indigo-500" />
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">필터</span>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700">
+              <div className="flex items-center gap-1.5">
+                <Filter className="h-3.5 w-3.5 text-indigo-500" />
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">필터</span>
+              </div>
+              <button
+                onClick={() => setIsSidebarCollapsed(true)}
+                title="메뉴바 접기"
+                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
             </div>
           )}
           <button
@@ -838,7 +859,8 @@ export default function MindMapBoard({
           </div>
           </>);
           })()}
-        </div>
+          </div>
+        )}
 
         {/* ================= 업무링크 모아보기 모달 ================= */}
         {linkModalDeptId && (() => {
