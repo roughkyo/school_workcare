@@ -101,5 +101,17 @@
   - 줄바꿈이 실제로 트리거된 12자 초과의 카드에 대해 최소 안전 보장 가로폭(`minWidthForWrapped`)을 **로그아웃 시 120px / 로그인 시 152px** 이상으로 강제 설정했습니다.
   - 이에 따라 `'26연구학교 유공교원확인'`과 같은 카드가 극단적으로 좁은 가로폭에 갇히지 않고 120px/152px의 충분한 너비를 확보하여, 무분별하게 4줄 이상으로 쪼개지지 않고 깔끔하고 균형 잡힌 **2줄 개행**을 안정적으로 유지합니다.
 
+---
 
-
+## 11. 다크모드 해제, 집중 효과 강화 및 모바일 캔버스 최적화 (2026-06-24)
+- **개선 요구사항**:
+  1. 다크모드를 전면 차단하고 상시 라이트모드를 강제 적용합니다.
+  2. "교무실 대시보드"의 상시 집중 효과가 사라졌던 문제를 복구하고 더욱 눈에 띄게 시각화합니다.
+  3. 모바일 화면에서 기존의 일방적인 아코디언 목록 뷰 강제 방식 대신, 캔버스 뷰와 목록 뷰를 전환할 수 있는 선택 스위치 및 터치 탐색 최적화를 제공합니다.
+- **조치 내용**:
+  - **다크모드 해제**: [globals.css](file:///c:/Users/ysj/Desktop/upload_all/학교_부서별_업무링크_정적사이트/src/app/globals.css)에서 `prefers-color-scheme: dark` 미디어 쿼리를 제거하고 Tailwind v4에 `@custom-variant dark (&:where(.dark, .dark *));` 규칙 및 `color-scheme: light`를 지정해 다크모드를 무력화했습니다.
+  - **집중 효과 복구/강화**: [DepartmentCard.tsx](file:///c:/Users/ysj/Desktop/upload_all/학교_부서별_업무링크_정적사이트/src/components/DepartmentCard.tsx)에서 대시보드 노드 검증을 부분 일치(includes)로 확장하여 공백 변형도 걸러내도록 하였고, `border-orange-500` 테두리, `scale-[1.05]`, `shadow-orange-200 shadow-xl` 및 오렌지 링 효과(`ring-2 ring-orange-500 ring-offset-1`)를 합쳐 펄스 집중 효과를 복구 및 강화했습니다.
+  - **모바일 캔버스 뷰 최적화**: [MindMapBoard.tsx](file:///c:/Users/ysj/Desktop/upload_all/학교_부서별_업무링크_정적사이트/src/components/MindMapBoard.tsx)에 `mobileViewMode` 상태를 추가해 모바일에서도 목록 뷰와 마인드맵 캔버스 뷰를 오갈 수 있는 탭 스위치 UI를 제공했습니다. 또한, 캔버스 모드 시 모바일 기기 터치 드래그 팬(Pan) 및 줌 제약 조건을 해제하고, 첫 렌더링 시 전체가 눈에 보이도록 시작 줌을 `0.45`로 맞춰 중앙 정렬하는 최적화를 구현했습니다.
+- **검증 결과**:
+  - 로컬 `npm run build` 결과 에러 없이 성공적으로 빌드가 완료되었습니다.
+  - 깃허브 `main` 브랜치 푸시와 Vercel 자동 배포 트리거를 완료했습니다.
